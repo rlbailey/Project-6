@@ -42,6 +42,23 @@ struct sector{
 	//basically an array? Array of 512 bytes?
 }
 
+struct fat{//FAT entry. Composed of 12 bits.
+	unsigned char portion1;
+	unsigned char portion2;
+	unsigned char portoin3;//needs to merge with the next portion?
+	
+	fat(cha a, char b, char c){
+		portion1=a;
+		portion2=b;
+		portion3=c;//but not really
+	}
+	//so how do we take this from bytes to bits
+	//also, do we need a second version of this since when we look at the next entry's portion1 to grab half of it...
+	//...then its portion 3 is fine?
+	//consider counting 1 entry as 2?
+	//unsigned char portion4 through 6, and then 3 and 4 just "share" somehow?
+}
+
 struct directory{
 	unsigned char name[8];
 	unsigned char ext[3]
