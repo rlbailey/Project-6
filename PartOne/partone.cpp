@@ -1,7 +1,7 @@
 // CS3242 Operating Systems
 // Fall 2013
 // Project 6: Disks and File Systems
-// Richard L. Bailey
+// Richard L. Bailey & Hue Moua
 // Date: 12/2/2013
 // File: partone.cpp
 
