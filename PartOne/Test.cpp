@@ -3,16 +3,49 @@
  * Sample Unit Tests
  */
 
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
+#include "partone.cpp"
 
 using namespace std;
 
+class MemoryTest : public testing::Test {
+protected:
+	MemoryTest(void) { }
+	~MemoryTest(void) { }
+	virtual void SetUp(void) { }
+	virtual void TearDown(void) { }
+
+	Memory memory;
+};
+
+TEST_F(MemoryTest, LoadMemoryTest)
+{
+	memory.LoadMemory();
+
+	char s[1024];
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		sprintf(s + 2 * i, "%02X", memory.memory[i]);
+	}
+
+	ASSERT_STREQ("B8C0070520018ED0BC0010B8C0078ED8BE2200E89300BE4100E88D00BE6100E8870043532D444F53204F7065726174696E672053797374656D2076312E300D0A004372656174656420666F72204353333432332C2046616C6C20323031330D0A0028432920436F7079726967687420323031332062792052494348415244204241494C455920616E6420485545204D4F55412E20416C6C207269676874732072657365727665642E00B40EAC3C007404CD10EBF7C3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055AA", s);
+}
+
 class StringTest : public testing::Test {
 protected:
-	StringTest(void);
-	~StringTest(void);
-	virtual void SetUp(void);
-	virtual void TearDown(void);
+	StringTest(void) : s1("Hello World!"), p1(NULL) { }
+	~StringTest(void) { }
+
+	// Set up fixtures ONCE for EACH unit test.
+	virtual void SetUp(void) {
+		p1 = new string("Good-bye.");
+	}
+
+	// Clean up fixtures after EACH unit test is done running.
+	virtual void TearDown(void) {
+		delete p1;
+	}
 
 	string s1;
 	string *p1;
@@ -29,20 +62,6 @@ TEST_F(StringTest, LengthTest)
 {
 	// Continues running unit tests even if this statement fails.
 	EXPECT_EQ(9, p1->length());
-}
-
-StringTest::StringTest(void) : s1("Hello World!"), p1(NULL) { }
-
-StringTest::~StringTest(void) { }
-
-// Set up fixtures ONCE for EACH unit test.
-void StringTest::SetUp(void) {
-	p1 = new string("Good-bye.");
-}
-
-// Clean up fixtures after EACH unit test is done running.
-void StringTest::TearDown(void) {
-	delete p1;
 }
 
 class BoolTest : public testing::Test
