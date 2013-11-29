@@ -95,6 +95,16 @@ struct Directory {
 		strncpy((char*)this->filename, filename.c_str(), 8);
 		strncpy((char*)this->extension, extension.c_str(), 3);
 	}
+	
+	void rename(string newName){
+		int temp = newName.size();
+		if(temp > 8){
+			temp = (temp - (temp-8));
+		}
+		for(int i = 0; i<temp; i++){
+			filename[i]=newName[i];
+		}
+	}
 };
 
 struct Memory {
