@@ -1,7 +1,7 @@
 // CS3242 Operating Systems
 // Fall 2013
 // Project 6: Disks and File Systems
-// Richard L. Bailey
+// Richard L. Bailey & Hue Moua
 // Date: 12/2/2013
 // File: partone.cpp
 
@@ -94,6 +94,16 @@ struct Directory {
 	{
 		strncpy((char*)this->filename, filename.c_str(), 8);
 		strncpy((char*)this->extension, extension.c_str(), 3);
+	}
+	
+	void rename(string newName){
+		int temp = newName.size();
+		if(temp > 8){
+			temp = (temp - (temp-8));
+		}
+		for(int i = 0; i<temp; i++){
+			filename[i]=newName[i];
+		}
 	}
 };
 
