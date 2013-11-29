@@ -5,6 +5,8 @@
 // Date: 12/2/2013
 // File: main.cpp
 
+#include "partone.cpp"
+
 //TODO:
 //Implement a method to fill a directory entry. This will also make an entry in both FATs
 ///Just randomly generate letters?
@@ -15,5 +17,9 @@
 
 int main(void)
 {
+	Memory memory;
+
+	memory.LoadMemory();
+
 	return 0;
 }

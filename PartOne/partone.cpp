@@ -5,14 +5,25 @@
 // Date: 12/2/2013
 // File: partone.cpp
 
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <iostream>
+#include <fstream>
+
+#define FLP "fdd.flp"
+#define NUM_OF_BYTES_IN_FLOPPY 1474560
+
 typedef unsigned char byte;
+
+using namespace std;
 
 struct Sector {
 	// # bytes? 512
 	// basically an array? Array of 512 bytes?
 };
 
-struct FileSystem {
+struct Floppy {
 	// likely not all these sectors
 	Sector bootSector[0];
 	Sector FAT1[9];
@@ -24,7 +35,7 @@ struct FileSystem {
 
 	// initializing?
 	//likely wont use ints
-	FileSystem(int a, int b) {
+	Floppy(int a, int b) {
 		// a = ?
 		// b = ?
 		// create the 160 tracks which create the sectors
@@ -70,15 +81,42 @@ struct Directory {
 	unsigned short firstLogicalSector;
 	unsigned long fileSize;
 
-	Directory(std::string filename, std::string extension, byte attributes,
+	Directory(string filename, string extension, byte attributes,
 			unsigned short reserved, unsigned short createTime,
 			unsigned short createDate, unsigned short lastAccessDate,
 			unsigned short ignore, unsigned short lastWriteTime,
 			unsigned short lastWriteDate, unsigned short firstLogicalSector,
-			unsigned short fileSize) : attributes(attributes), reserved(reserved), createTime(createTime), createDate(createDate), lastAccessDate(lastAccessDate),
-					ignore(ignore), lastWriteTime(lastWriteTime), lastWriteDate(lastWriteDate), firstLogicalSector(firstLogicalSector), fileSize(fileSize)
+			unsigned short fileSize) :
+			attributes(attributes), reserved(reserved), createTime(createTime), createDate(
+					createDate), lastAccessDate(lastAccessDate), ignore(ignore), lastWriteTime(
+					lastWriteTime), lastWriteDate(lastWriteDate), firstLogicalSector(
+					firstLogicalSector), fileSize(fileSize)
 	{
 		strncpy((char*)this->filename, filename.c_str(), 8);
 		strncpy((char*)this->extension, extension.c_str(), 3);
+	}
+};
+
+struct Memory {
+	byte memory[NUM_OF_BYTES_IN_FLOPPY];
+
+	// Loads the floppy disk image into memory
+	void LoadMemory()
+	{
+		FILE *file = fopen(FLP, "r");
+
+		if (NULL == file)
+		{
+			perror("Error opening file.");
+		}
+		else
+		{
+			int i = 0;
+
+			while (!feof(file))
+			{
+				memory[i++] = fgetc(file);
+			}
+		}
 	}
 };
