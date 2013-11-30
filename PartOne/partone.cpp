@@ -12,6 +12,7 @@
 
 #define FLP "fdd.flp"
 #define NUM_OF_BYTES_PER_SECTOR 512
+#define NUM_OF_FAT_ENTRIES 9 * NUM_OF_BYTES_PER_SECTOR / 12
 #define NUM_OF_BYTES_IN_FLOPPY 2 * 80 * 18 * NUM_OF_BYTES_PER_SECTOR
 #define UNUSED_SECTOR 0x0
 #define RESERVED_SECTOR 0xFF0
@@ -67,7 +68,7 @@ struct Memory {
 			perror("Error opening file.");
 		}
 		else {
-			int i = 0;
+			size_t i = 0;
 
 			while (!feof(file)) {
 				memory[i++] = fgetc(file);
@@ -87,8 +88,6 @@ struct FileAllocationTable {
 		FATEntry() : value(0), index(-1), memory(NULL) { }
 
 		FATEntry& operator=(const short &value) {
-//			size_t index = 31
-
 			// The logical start of the entry inside the FAT.
 			size_t base = 3 * index / 2;
 
@@ -113,26 +112,17 @@ struct FileAllocationTable {
 		}
 	};
 
-	FATEntry entries[384];
+	FATEntry entries[NUM_OF_FAT_ENTRIES];
 	Memory *memory;
-	byte portion1;
-	byte portion2;
-	byte portion3; // needs to merge with the next portion?
 
 	FileAllocationTable(Memory &memory) : memory(&memory) {
-		for (size_t i = 0; i < 384; ++i) {
+		for (size_t i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
 			entries[i].index = i;
 			entries[i].memory = &memory;
 		}
 
 		entries[0] = RESERVED_SECTOR;
 		entries[1] = RESERVED_SECTOR;
-	}
-
-	FileAllocationTable(char a, char b, char c) {
-		portion1 = a;
-		portion2 = b;
-		portion3 = c; // but not really
 	}
 
 	// so how do we take this from bytes to bits
