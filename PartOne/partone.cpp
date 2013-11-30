@@ -11,13 +11,8 @@
 #include <string>
 
 #define FLP "fdd.flp"
-#define NUM_OF_BYTES_PER_SECTOR 512
-#define NUM_OF_FAT_ENTRIES 9 * NUM_OF_BYTES_PER_SECTOR / 12
-#define NUM_OF_DIRECTORIES 14 * NUM_OF_BYTES_PER_SECTOR / 32
-#define NUM_OF_BYTES_IN_FLOPPY 2 * 80 * 18 * NUM_OF_BYTES_PER_SECTOR
-#define START_OF_FAT1 1 * NUM_OF_BYTES_PER_SECTOR
-#define START_OF_FAT2 10 * NUM_OF_BYTES_PER_SECTOR
-#define START_OF_ROOT_DIRECTORY 19 * NUM_OF_BYTES_PER_SECTOR
+#define BYTES_PER_SECTOR 512
+#define NUM_OF_DIRECTORIES 14 * BYTES_PER_SECTOR / 32
 #define UNUSED_SECTOR 0x0
 #define RESERVED_SECTOR 0xFF0
 #define BAD_SECTOR 0xFF7
@@ -34,40 +29,41 @@ struct Sector {
 	// basically an array? Array of 512 bytes?
 };
 
-struct Floppy {
-	// likely not all these sectors
-	Sector bootSector[0];
-	Sector FAT1[9];
-	Sector FAT2[9];
-	Sector rootDir[14];
-	Sector dataArea[2847];
-
-	// create one giant Sector array?
-
-	// initializing?
-	//likely wont use ints
-	Floppy(int a, int b) {
-		// a = ?
-		// b = ?
-		// create the 160 tracks which create the sectors
-	}
-};
+//struct Floppy {
+//	// likely not all these sectors
+//	Sector bootSector[0];
+//	Sector FAT1[9];
+//	Sector FAT2[9];
+//	Sector rootDir[14];
+//	Sector dataArea[2847];
+//
+//	// create one giant Sector array?
+//
+//	// initializing?
+//	//likely wont use ints
+//	Floppy(int a, int b) {
+//		// a = ?
+//		// b = ?
+//		// create the 160 tracks which create the sectors
+//	}
+//};
 
 struct Track {
 	// make 18 sectors
 	// array of sectors .. ?
 };
 
+struct Floppy {
+	static const size_t bytesInFloppy = 2 * 80 * 18 * BYTES_PER_SECTOR;
 
-struct Memory {
-	byte memory[NUM_OF_BYTES_IN_FLOPPY];
+	byte bytes[bytesInFloppy];
 
-	Memory(void) {
-		LoadMemory();
+	Floppy(void) {
+		LoadFloppy();
 	}
 
 	// Loads the floppy disk image into memory
-	void LoadMemory() {
+	void LoadFloppy() {
 		FILE *file = fopen(FLP, "r");
 
 		if (NULL == file) {
@@ -77,7 +73,7 @@ struct Memory {
 			size_t i = 0;
 
 			while (!feof(file)) {
-				memory[i++] = fgetc(file);
+				bytes[i++] = fgetc(file);
 			}
 		}
 	}
@@ -87,49 +83,62 @@ struct Memory {
 // Composed of 12 bits.
 struct FileAllocationTable {
 	struct FATEntry {
-		byte value;
-		int index;
-		Memory *memory;
+		static const size_t bitsPerEntry = 12;
 
-		FATEntry() : value(0), index(-1), memory(NULL) { }
+		short value;
+		int offset;	// The logical start of the entry inside the FAT.
+		Floppy *memory;
 
+		FATEntry() : value(UNUSED_SECTOR), offset(-1), memory(NULL) { }
+
+		void setOffset(size_t index) {
+			offset = 3 * index / 2;
+		}
+
+		// Set the FAT entry to the specified value for both FAT tables in memory
 		FATEntry& operator=(const short &value) {
-			// The logical start of the entry inside the FAT.
-			size_t offset = 3 * index / 2;
+			if (offset < 0 || offset > FileAllocationTable::bytesPerFAT) throw out_of_range("FAT entry offset iiiiiiis out of range.");
 
-			// The offset of the entry to the correct byte in the correct sector.
-			// One for each FAT.
+			this->value = value;
 
-			if (index % 2 == 0) {
-				memory->memory[START_OF_FAT1 + offset] = value >> 4;
-				memory->memory[START_OF_FAT1 + 1 + offset] &= 0xF;
-				memory->memory[START_OF_FAT1 + 1 + offset] |= (value & 0xF) << 4;
-				memory->memory[START_OF_FAT2 + offset] = value >> 4;
-				memory->memory[START_OF_FAT2 + 1 + offset] &= 0xF;
-				memory->memory[START_OF_FAT2 + 1 + offset] |= (value & 0xF) << 4;
-			}
-			else {
-				memory->memory[START_OF_FAT1 + offset] &= 0xF0;
-				memory->memory[START_OF_FAT1 + offset] |= value >> 8;
-				memory->memory[START_OF_FAT1 + 1 + offset] = value & 0xFF;
-				memory->memory[START_OF_FAT2 + offset] &= 0xF0;
-				memory->memory[START_OF_FAT2 + offset] |= value >> 8;
-				memory->memory[START_OF_FAT2 + 1 + offset] = value & 0xFF;
+			if (offset % 3 == 0) {
+				memory->bytes[FileAllocationTable::fat1Base + offset] = value >> 4;
+				memory->bytes[FileAllocationTable::fat1Base + 1 + offset] &= 0xF;
+				memory->bytes[FileAllocationTable::fat1Base + 1 + offset] |= (value & 0xF) << 4;
+
+				memory->bytes[FileAllocationTable::fat2Base + offset] = value >> 4;
+				memory->bytes[FileAllocationTable::fat2Base + 1 + offset] &= 0xF;
+				memory->bytes[FileAllocationTable::fat2Base + 1 + offset] |= (value & 0xF) << 4;
+			} else {
+				memory->bytes[FileAllocationTable::fat1Base + offset] &= 0xF0;
+				memory->bytes[FileAllocationTable::fat1Base + offset] |= value >> 8;
+				memory->bytes[FileAllocationTable::fat1Base + 1 + offset] = value & 0xFF;
+
+				memory->bytes[FileAllocationTable::fat2Base + offset] &= 0xF0;
+				memory->bytes[FileAllocationTable::fat2Base + offset] |= value >> 8;
+				memory->bytes[FileAllocationTable::fat2Base + 1 + offset] = value & 0xFF;
 			}
 
 			return *this;
 		}
 	};
 
-	FATEntry entries[NUM_OF_FAT_ENTRIES];
-	Memory *memory;
+	static const size_t sectorsPerFAT = 9;
+	static const size_t bytesPerFAT = sectorsPerFAT * BYTES_PER_SECTOR;
+	static const size_t numOfFATEntries = bytesPerFAT / FATEntry::bitsPerEntry;
+	static const size_t fat1Base = 1 * BYTES_PER_SECTOR;
+	static const size_t fat2Base = 10 * BYTES_PER_SECTOR;
 
-	FileAllocationTable(Memory &memory) : memory(&memory) {
-		for (size_t i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
-			entries[i].index = i;
-			entries[i].memory = &memory;
+	FATEntry entries[numOfFATEntries];
+	Floppy *memory;
+
+	FileAllocationTable(Floppy *memory) : memory(memory) {
+		for (size_t i = 0; i < numOfFATEntries; ++i) {
+			entries[i].setOffset(i);
+			entries[i].memory = memory;
 		}
 
+		// Reseve these sectors
 		entries[0] = RESERVED_SECTOR;
 		entries[1] = RESERVED_SECTOR;
 	}
@@ -141,9 +150,23 @@ struct FileAllocationTable {
 	// unsigned char portion4 through 6, and then 3 and 4 just "share" somehow?
 };
 
-struct Directory {
-	size_t index;
-	Memory *memory;
+struct RootDirectory {
+	static const size_t directoryBase = 19 * BYTES_PER_SECTOR;
+	static const size_t bytesPerDirectory = 32;
+	static const size_t extensionOffset = 8;
+	static const size_t attributesOffset = 11;
+	static const size_t reservedOffset = 12;
+	static const size_t createTimeOffset = 14;
+	static const size_t createDateOffset = 16;
+	static const size_t lastAccessOffset = 18;
+	static const size_t ignoreOffset = 20;
+	static const size_t lastWriteTimeOffset = 22;
+	static const size_t lastWriteDateOffset = 24;
+	static const size_t firstLogicalSectorOffset = 26;
+	static const size_t fileSizeOffset = 28;
+
+	int offset;
+	Floppy *memory;
 
 	byte filename[8];
 	byte extension[3];
@@ -155,10 +178,32 @@ struct Directory {
 	unsigned short ignore;
 	unsigned short lastWriteTime;
 	unsigned short lastWriteDate;
+	//	out <<
+	//	out << "mylist {";
+	//
+	//	for (mylist<T>::node *current_ptr = l.head_ptr; current_ptr != nullptr; current_ptr = current_ptr->next_ptr)
+	//	{
+	//		out << current_ptr->data << " ";
+	//	}
+	//
+	//	out << "}" << endl;
+
 	unsigned short firstLogicalSector;
 	unsigned long fileSize;
 
-	Directory(string filename, string extension, byte attributes,
+	RootDirectory(Floppy *memory) : memory(memory) { }
+
+	//	out <<
+	//	out << "mylist {";
+	//
+	//	for (mylist<T>::node *current_ptr = l.head_ptr; current_ptr != nullptr; current_ptr = current_ptr->next_ptr)
+	//	{
+	//		out << current_ptr->data << " ";
+	//	}
+	//
+	//	out << "}" << endl;
+
+	RootDirectory(string filename, string extension, byte attributes,
 			unsigned short reserved, unsigned short createTime,
 			unsigned short createDate, unsigned short lastAccessDate,
 			unsigned short ignore, unsigned short lastWriteTime,
@@ -172,15 +217,46 @@ struct Directory {
 		strncpy((char*)this->extension, extension.c_str(), 3);
 	}
 
-	byte* getFilename() {
-		size_t base = 32 * index;
+	void setOffset(size_t index) {
+		offset = index * bytesPerDirectory;
+	}
 
-		return &memory->memory[base + START_OF_ROOT_DIRECTORY];
+	string getFilename() const {
+		byte *temp = memory->bytes + directoryBase + offset;
+
+		if (temp) return string(reinterpret_cast<char*>(temp), 8);
+
+		return "";
+
+//		return string((char*)(memory->memory)[directoryBase + offset]);
+//		string s;
+//
+//
+//
+//		strncpy(s, memory->memory[directoryBase + offset], 8);
+//		return reinterpret_cast<char*>(memory->memory[directoryBase + offset]);
 //		char s[8];
 //
 //		strncpy(s, reinterpret_cast<const char*>(memory->memory + base + START_OF_ROOT_DIRECTORY), 8);
 //
 //		return s;
+	}
+
+	string getExtension() const {
+		byte *temp = memory->bytes + directoryBase + offset + extensionOffset;
+
+		if (temp) return string(reinterpret_cast<char*>(temp), 3);
+
+		return "";
+
+//		return string(reinterpret_cast<char*>(memory->memory[directoryBase + offset + extensionOffset]), 3);
+//		return string((char*)(memory->memory) + directoryBase + offset + extensionOffset);
+//		return reinterpret_cast<char*>(memory->memory[directoryBase + offset + extensionOffset]);
+	}
+
+	unsigned long getFileSize() const {
+		return *reinterpret_cast<unsigned long*>(memory->bytes + directoryBase + offset + fileSizeOffset);
+//		return memory->memory[directoryBase + offset + fileSizeOffset];
 	}
 
 	void rename(string newName){
@@ -193,36 +269,28 @@ struct Directory {
 		}
 	}
 
-	// Not really needed
-    friend ostream& operator<<(ostream &out, const Directory &directory);
-
-    char* getLastWriteDate() {
-    	char s[8];
-
-
+    string getLastWriteDate() const {
+    	return "";
     }
+
+    string getLastWriteTime() const {
+    	return "";
+    }
+
+	// Not really needed
+    friend ostream& operator<<(ostream &out, const RootDirectory &directory);
 };
 
-inline ostream& operator<<(ostream &out, const Directory &directory) {
+inline ostream& operator<<(ostream &out, const RootDirectory &directory) {
 	puts("Volume Serial Number is 0859-1A04\n");
-	puts("Directory of C:\\\n\n");
+	puts("RootDirectory of C:\\\n\n");
 
 	for (size_t i = 0; i < NUM_OF_DIRECTORIES; ++i) {
-		if (LAST_DIRECTORY == directory.filename[0]) break;
-		if (EMPTY_DIRECTORY == directory.filename[0]) continue;
+		if (LAST_DIRECTORY == directory.memory->bytes[RootDirectory::directoryBase]) break;
+		if (EMPTY_DIRECTORY == directory.memory->bytes[RootDirectory::directoryBase]) continue;
 
-		printf("%8s %3s %7i %8s %6s", directory.filename, directory.extension, directory.fileSize);
+		printf("%-8s %-3s %7lu %8s %6s", directory.getFilename().c_str(), directory.getExtension().c_str(), directory.getFileSize(), directory.getLastWriteDate().c_str(), directory.getLastWriteTime().c_str());
 	}
 
-//	out <<
-//	out << "mylist {";
-//
-//	for (mylist<T>::node *current_ptr = l.head_ptr; current_ptr != nullptr; current_ptr = current_ptr->next_ptr)
-//	{
-//		out << current_ptr->data << " ";
-//	}
-//
-//	out << "}" << endl;
-//
-//	return out;
+	return out;
 }

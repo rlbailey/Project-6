@@ -5,6 +5,8 @@
 // Date: 12/2/2013
 // File: main.cpp
 
+#include <iostream>
+
 #include "partone.cpp"
 
 //TODO:
@@ -17,9 +19,17 @@
 
 int main(void)
 {
-	Memory memory;
+	Floppy floppy;
 
-	FileAllocationTable fat(memory);
+	FileAllocationTable fat(&floppy);
+
+	RootDirectory directory(&floppy);
+
+	directory.setOffset(0);
+	strcpy(reinterpret_cast<char*>(floppy.bytes + 9728), "WHALE");
+	*reinterpret_cast<unsigned long*>(floppy.bytes + 9728 + 28) = 1193405;
+
+	cout << directory;
 
 	return 0;
 }
