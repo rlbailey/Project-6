@@ -13,11 +13,17 @@
 #define FLP "fdd.flp"
 #define NUM_OF_BYTES_PER_SECTOR 512
 #define NUM_OF_FAT_ENTRIES 9 * NUM_OF_BYTES_PER_SECTOR / 12
+#define NUM_OF_DIRECTORIES 14 * NUM_OF_BYTES_PER_SECTOR / 32
 #define NUM_OF_BYTES_IN_FLOPPY 2 * 80 * 18 * NUM_OF_BYTES_PER_SECTOR
+#define START_OF_FAT1 1 * NUM_OF_BYTES_PER_SECTOR
+#define START_OF_FAT2 10 * NUM_OF_BYTES_PER_SECTOR
+#define START_OF_ROOT_DIRECTORY 19 * NUM_OF_BYTES_PER_SECTOR
 #define UNUSED_SECTOR 0x0
 #define RESERVED_SECTOR 0xFF0
 #define BAD_SECTOR 0xFF7
 #define LAST_SECTOR 0xFF8
+#define EMPTY_DIRECTORY 0xE5
+#define LAST_DIRECTORY 0x00
 
 typedef unsigned char byte;
 
@@ -93,19 +99,18 @@ struct FileAllocationTable {
 
 			// The offset of the entry to the correct byte in the correct sector.
 			// One for each FAT.
-			size_t offset1 = 512, offset2 = 5120;
 
 			if (index % 2 == 0) {
-				memory->memory[base + offset1] = value >> 4;
-				memory->memory[base + offset1 + 1] |= (value & 0xF) << 4;
-				memory->memory[base + offset2] = value >> 4;
-				memory->memory[base + offset2 + 1] |= (value & 0xF) << 4;
+				memory->memory[base + START_OF_FAT1] = value >> 4;
+				memory->memory[base + START_OF_FAT1 + 1] |= (value & 0xF) << 4;
+				memory->memory[base + START_OF_FAT2] = value >> 4;
+				memory->memory[base + START_OF_FAT2 + 1] |= (value & 0xF) << 4;
 			}
 			else {
-				memory->memory[base + offset1] |= value >> 8;
-				memory->memory[base + offset1 + 1] = value & 0xFF;
-				memory->memory[base + offset2] |= value >> 8;
-				memory->memory[base + offset2 + 1] = value & 0xFF;
+				memory->memory[base + START_OF_FAT1] |= value >> 8;
+				memory->memory[base + START_OF_FAT1 + 1] = value & 0xFF;
+				memory->memory[base + START_OF_FAT2] |= value >> 8;
+				memory->memory[base + START_OF_FAT2 + 1] = value & 0xFF;
 			}
 
 			return *this;
@@ -133,6 +138,9 @@ struct FileAllocationTable {
 };
 
 struct Directory {
+	size_t index;
+	Memory *memory;
+
 	byte filename[8];
 	byte extension[3];
 	byte attributes;
@@ -155,10 +163,20 @@ struct Directory {
 			attributes(attributes), reserved(reserved), createTime(createTime), createDate(
 					createDate), lastAccessDate(lastAccessDate), ignore(ignore), lastWriteTime(
 					lastWriteTime), lastWriteDate(lastWriteDate), firstLogicalSector(
-					firstLogicalSector), fileSize(fileSize)
-	{
+					firstLogicalSector), fileSize(fileSize) {
 		strncpy((char*)this->filename, filename.c_str(), 8);
 		strncpy((char*)this->extension, extension.c_str(), 3);
+	}
+
+	byte* getFilename() {
+		size_t base = 32 * index;
+
+		return &memory->memory[base + START_OF_ROOT_DIRECTORY];
+//		char s[8];
+//
+//		strncpy(s, reinterpret_cast<const char*>(memory->memory + base + START_OF_ROOT_DIRECTORY), 8);
+//
+//		return s;
 	}
 
 	void rename(string newName){
@@ -170,4 +188,37 @@ struct Directory {
 			filename[i]=newName[i];
 		}
 	}
+
+	// Not really needed
+    friend ostream& operator<<(ostream &out, const Directory &directory);
+
+    char* getLastWriteDate() {
+    	char s[8];
+
+
+    }
 };
+
+inline ostream& operator<<(ostream &out, const Directory &directory) {
+	puts("Volume Serial Number is 0859-1A04\n");
+	puts("Directory of C:\\\n\n");
+
+	for (size_t i = 0; i < NUM_OF_DIRECTORIES; ++i) {
+		if (LAST_DIRECTORY == directory.filename[0]) break;
+		if (EMPTY_DIRECTORY == directory.filename[0]) continue;
+
+		printf("%8s %3s %7i %8s %6s", directory.filename, directory.extension, directory.fileSize);
+	}
+
+//	out <<
+//	out << "mylist {";
+//
+//	for (mylist<T>::node *current_ptr = l.head_ptr; current_ptr != nullptr; current_ptr = current_ptr->next_ptr)
+//	{
+//		out << current_ptr->data << " ";
+//	}
+//
+//	out << "}" << endl;
+//
+//	return out;
+}
