@@ -95,22 +95,26 @@ struct FileAllocationTable {
 
 		FATEntry& operator=(const short &value) {
 			// The logical start of the entry inside the FAT.
-			size_t base = 3 * index / 2;
+			size_t offset = 3 * index / 2;
 
 			// The offset of the entry to the correct byte in the correct sector.
 			// One for each FAT.
 
 			if (index % 2 == 0) {
-				memory->memory[base + START_OF_FAT1] = value >> 4;
-				memory->memory[base + START_OF_FAT1 + 1] |= (value & 0xF) << 4;
-				memory->memory[base + START_OF_FAT2] = value >> 4;
-				memory->memory[base + START_OF_FAT2 + 1] |= (value & 0xF) << 4;
+				memory->memory[START_OF_FAT1 + offset] = value >> 4;
+				memory->memory[START_OF_FAT1 + 1 + offset] &= 0xF;
+				memory->memory[START_OF_FAT1 + 1 + offset] |= (value & 0xF) << 4;
+				memory->memory[START_OF_FAT2 + offset] = value >> 4;
+				memory->memory[START_OF_FAT2 + 1 + offset] &= 0xF;
+				memory->memory[START_OF_FAT2 + 1 + offset] |= (value & 0xF) << 4;
 			}
 			else {
-				memory->memory[base + START_OF_FAT1] |= value >> 8;
-				memory->memory[base + START_OF_FAT1 + 1] = value & 0xFF;
-				memory->memory[base + START_OF_FAT2] |= value >> 8;
-				memory->memory[base + START_OF_FAT2 + 1] = value & 0xFF;
+				memory->memory[START_OF_FAT1 + offset] &= 0xF0;
+				memory->memory[START_OF_FAT1 + offset] |= value >> 8;
+				memory->memory[START_OF_FAT1 + 1 + offset] = value & 0xFF;
+				memory->memory[START_OF_FAT2 + offset] &= 0xF0;
+				memory->memory[START_OF_FAT2 + offset] |= value >> 8;
+				memory->memory[START_OF_FAT2 + 1 + offset] = value & 0xFF;
 			}
 
 			return *this;
