@@ -56,6 +56,8 @@ struct Track {
 struct Floppy {
 	static const size_t bytesInFloppy = 2 * 80 * 18 * BYTES_PER_SECTOR;
 
+	FILE *file;
+
 	byte bytes[bytesInFloppy];
 
 	Floppy(void) {
@@ -64,12 +66,11 @@ struct Floppy {
 
 	// Loads the floppy disk image into memory
 	void LoadFloppy() {
-		FILE *file = fopen(FLP, "r");
+		file = fopen(FLP, "rw");
 
 		if (NULL == file) {
 			perror("Error opening file.");
-		}
-		else {
+		} else {
 			size_t i = 0;
 
 			while (!feof(file)) {
@@ -87,9 +88,9 @@ struct FileAllocationTable {
 
 		short value;
 		int offset;	// The logical start of the entry inside the FAT.
-		Floppy *memory;
+		Floppy *floppy;
 
-		FATEntry() : value(UNUSED_SECTOR), offset(-1), memory(NULL) { }
+		FATEntry() : value(UNUSED_SECTOR), offset(-1), floppy(NULL) { }
 
 		void setOffset(size_t index) {
 			offset = 3 * index / 2;
@@ -97,26 +98,26 @@ struct FileAllocationTable {
 
 		// Set the FAT entry to the specified value for both FAT tables in memory
 		FATEntry& operator=(const short &value) {
-			if (offset < 0 || offset > FileAllocationTable::bytesPerFAT) throw out_of_range("FAT entry offset iiiiiiis out of range.");
+			if (offset < 0 || offset > FileAllocationTable::bytesPerFAT) throw out_of_range("FAT entry offset is out of range.");
 
 			this->value = value;
 
 			if (offset % 3 == 0) {
-				memory->bytes[FileAllocationTable::fat1Base + offset] = value >> 4;
-				memory->bytes[FileAllocationTable::fat1Base + 1 + offset] &= 0xF;
-				memory->bytes[FileAllocationTable::fat1Base + 1 + offset] |= (value & 0xF) << 4;
+				floppy->bytes[FileAllocationTable::fat1Base + offset] = value >> 4;
+				floppy->bytes[FileAllocationTable::fat1Base + 1 + offset] &= 0xF;
+				floppy->bytes[FileAllocationTable::fat1Base + 1 + offset] |= (value & 0xF) << 4;
 
-				memory->bytes[FileAllocationTable::fat2Base + offset] = value >> 4;
-				memory->bytes[FileAllocationTable::fat2Base + 1 + offset] &= 0xF;
-				memory->bytes[FileAllocationTable::fat2Base + 1 + offset] |= (value & 0xF) << 4;
+				floppy->bytes[FileAllocationTable::fat2Base + offset] = value >> 4;
+				floppy->bytes[FileAllocationTable::fat2Base + 1 + offset] &= 0xF;
+				floppy->bytes[FileAllocationTable::fat2Base + 1 + offset] |= (value & 0xF) << 4;
 			} else {
-				memory->bytes[FileAllocationTable::fat1Base + offset] &= 0xF0;
-				memory->bytes[FileAllocationTable::fat1Base + offset] |= value >> 8;
-				memory->bytes[FileAllocationTable::fat1Base + 1 + offset] = value & 0xFF;
+				floppy->bytes[FileAllocationTable::fat1Base + offset] &= 0xF0;
+				floppy->bytes[FileAllocationTable::fat1Base + offset] |= value >> 8;
+				floppy->bytes[FileAllocationTable::fat1Base + 1 + offset] = value & 0xFF;
 
-				memory->bytes[FileAllocationTable::fat2Base + offset] &= 0xF0;
-				memory->bytes[FileAllocationTable::fat2Base + offset] |= value >> 8;
-				memory->bytes[FileAllocationTable::fat2Base + 1 + offset] = value & 0xFF;
+				floppy->bytes[FileAllocationTable::fat2Base + offset] &= 0xF0;
+				floppy->bytes[FileAllocationTable::fat2Base + offset] |= value >> 8;
+				floppy->bytes[FileAllocationTable::fat2Base + 1 + offset] = value & 0xFF;
 			}
 
 			return *this;
@@ -132,10 +133,10 @@ struct FileAllocationTable {
 	FATEntry entries[numOfFATEntries];
 	Floppy *memory;
 
-	FileAllocationTable(Floppy *memory) : memory(memory) {
+	FileAllocationTable(Floppy *floppy) : memory(floppy) {
 		for (size_t i = 0; i < numOfFATEntries; ++i) {
 			entries[i].setOffset(i);
-			entries[i].memory = memory;
+			entries[i].floppy = floppy;
 		}
 
 		// Reseve these sectors
@@ -166,7 +167,7 @@ struct RootDirectory {
 	static const size_t fileSizeOffset = 28;
 
 	int offset;
-	Floppy *memory;
+	Floppy *floppy;
 
 	byte filename[8];
 	byte extension[3];
@@ -191,7 +192,7 @@ struct RootDirectory {
 	unsigned short firstLogicalSector;
 	unsigned long fileSize;
 
-	RootDirectory(Floppy *memory) : memory(memory) { }
+	RootDirectory(Floppy *floppy) : floppy(floppy) { }
 
 	//	out <<
 	//	out << "mylist {";
@@ -222,13 +223,13 @@ struct RootDirectory {
 	}
 
 	string getFilename() const {
-		byte *temp = memory->bytes + directoryBase + offset;
+		byte *temp = floppy->bytes + directoryBase + offset;
 
 		if (temp) return string(reinterpret_cast<char*>(temp), 8);
 
 		return "";
 
-//		return string((char*)(memory->memory)[directoryBase + offset]);
+//		return string((char*)(floppy->memory)[directoryBase + offset]);
 //		string s;
 //
 //
@@ -243,7 +244,7 @@ struct RootDirectory {
 	}
 
 	string getExtension() const {
-		byte *temp = memory->bytes + directoryBase + offset + extensionOffset;
+		byte *temp = floppy->bytes + directoryBase + offset + extensionOffset;
 
 		if (temp) return string(reinterpret_cast<char*>(temp), 3);
 
@@ -255,8 +256,8 @@ struct RootDirectory {
 	}
 
 	unsigned long getFileSize() const {
-		return *reinterpret_cast<unsigned long*>(memory->bytes + directoryBase + offset + fileSizeOffset);
-//		return memory->memory[directoryBase + offset + fileSizeOffset];
+		return *reinterpret_cast<unsigned long*>(floppy->bytes + directoryBase + offset + fileSizeOffset);
+//		return floppy->floppy[directoryBase + offset + fileSizeOffset];
 	}
 
 	void rename(string newName){
@@ -269,16 +270,16 @@ struct RootDirectory {
 		}
 	}
 
-    string getLastWriteDate() const {
-    	return "";
-    }
+	string getLastWriteDate() const {
+		return "";
+	}
 
-    string getLastWriteTime() const {
-    	return "";
-    }
+	string getLastWriteTime() const {
+		return "";
+	}
 
 	// Not really needed
-    friend ostream& operator<<(ostream &out, const RootDirectory &directory);
+	friend ostream& operator<<(ostream &out, const RootDirectory &directory);
 };
 
 inline ostream& operator<<(ostream &out, const RootDirectory &directory) {
@@ -286,8 +287,8 @@ inline ostream& operator<<(ostream &out, const RootDirectory &directory) {
 	puts("RootDirectory of C:\\\n\n");
 
 	for (size_t i = 0; i < NUM_OF_DIRECTORIES; ++i) {
-		if (LAST_DIRECTORY == directory.memory->bytes[RootDirectory::directoryBase]) break;
-		if (EMPTY_DIRECTORY == directory.memory->bytes[RootDirectory::directoryBase]) continue;
+		if (LAST_DIRECTORY == directory.floppy->bytes[RootDirectory::directoryBase]) break;
+		if (EMPTY_DIRECTORY == directory.floppy->bytes[RootDirectory::directoryBase]) continue;
 
 		printf("%-8s %-3s %7lu %8s %6s", directory.getFilename().c_str(), directory.getExtension().c_str(), directory.getFileSize(), directory.getLastWriteDate().c_str(), directory.getLastWriteTime().c_str());
 	}
