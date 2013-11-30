@@ -19,7 +19,7 @@ int main(void)
 {
 	Memory memory;
 
-	memory.LoadMemory();
+	FileAllocationTable fat(memory);
 
 	return 0;
 }
