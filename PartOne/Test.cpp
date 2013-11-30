@@ -46,6 +46,9 @@ TEST_F(FileAllocationTableTest, DefaultConstructorTest)
 	EXPECT_EQ(memory.memory[512], 0xFF);
 	EXPECT_EQ(memory.memory[513], 0xF);
 	EXPECT_EQ(memory.memory[514], 0xF0);
+	EXPECT_EQ(memory.memory[5120], 0xFF);
+	EXPECT_EQ(memory.memory[5121], 0xF);
+	EXPECT_EQ(memory.memory[5122], 0xF0);
 }
 
 class StringTest : public testing::Test {

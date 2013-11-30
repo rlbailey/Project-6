@@ -89,15 +89,24 @@ struct FileAllocationTable {
 		FATEntry& operator=(const short &value) {
 //			size_t index = 31
 
-			size_t base = 3 * index / 2 + 512;
+			// The logical start of the entry inside the FAT.
+			size_t base = 3 * index / 2;
+
+			// The offset of the entry to the correct byte in the correct sector.
+			// One for each FAT.
+			size_t offset1 = 512, offset2 = 5120;
 
 			if (index % 2 == 0) {
-				memory->memory[base] = value >> 4;
-				memory->memory[base + 1] |= (value & 0xF) << 4;
+				memory->memory[base + offset1] = value >> 4;
+				memory->memory[base + offset1 + 1] |= (value & 0xF) << 4;
+				memory->memory[base + offset2] = value >> 4;
+				memory->memory[base + offset2 + 1] |= (value & 0xF) << 4;
 			}
 			else {
-				memory->memory[base] |= value >> 8;
-				memory->memory[base + 1] = value & 0xFF;
+				memory->memory[base + offset1] |= value >> 8;
+				memory->memory[base + offset1 + 1] = value & 0xFF;
+				memory->memory[base + offset2] |= value >> 8;
+				memory->memory[base + offset2 + 1] = value & 0xFF;
 			}
 
 			return *this;
