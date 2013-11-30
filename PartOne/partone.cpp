@@ -74,18 +74,6 @@ struct Memory {
 			}
 		}
 	}
-
-	const byte& operator[](size_t index) const {
-		if (index < 0 || index >= sizeof(memory)) throw out_of_range("Index is out of range");
-
-		return memory[index];
-	}
-
-	byte& operator[](size_t index) {
-		if (index < 0 || index >= sizeof(memory)) throw out_of_range("Index is out of range");
-
-		return memory[index];
-	}
 };
 
 // FAT entry.
@@ -136,18 +124,6 @@ struct FileAllocationTable {
 		portion1 = a;
 		portion2 = b;
 		portion3 = c; // but not really
-	}
-
-	const FATEntry& operator[](size_t index) const {
-		if (index < 0 || index >= sizeof(entries)) throw out_of_range("Index is out of range");
-
-		return entries[index];
-	}
-
-	FATEntry& operator[](size_t index) {
-		if (index < 0 || index >= sizeof(entries)) throw out_of_range("Index is out of range");
-
-		return entries[index];
 	}
 
 	// so how do we take this from bytes to bits
