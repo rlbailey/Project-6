@@ -319,6 +319,9 @@ struct Floppy {
 };
 
 inline ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
+	byte numOfFiles = 0;
+	unsigned long bytesUsed = 0;
+
 	puts("Volume Serial Number is 0859-1A04\n");
 	puts("Directory of C:\\\n\n");
 
@@ -329,7 +332,13 @@ inline ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 		if (EMPTY_DIRECTORY == entry.filename[0]) continue;
 
 		printf("%-8s %-3s   %7lu %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), entry.fileSize, toDate(entry.lastWriteDate).c_str(), toTime(entry.lastWriteTime).c_str());
+
+		numOfFiles++;
+		bytesUsed += entry.fileSize;
 	}
+
+	printf("      %3i file%3s    %7lu bytes\n", numOfFiles, (numOfFiles != 1 ? "(s)" : ""), bytesUsed);
+	printf("                     %7lu bytes free\n", 1474560 - bytesUsed);	// TODO Must take into account internal fragmentation.
 
 	return out;
 }
