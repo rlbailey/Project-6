@@ -239,33 +239,33 @@ struct Floppy {
 			}
 
 			string getLastWriteDate() const {
-//				string temp = *reinterpret_cast<unsigned char*>(lastWriteDate);//turn into a string
-//				string temp2;
-//				temp2.push_back(temp[1]);
-//				temp2.push_back(temp[2]);
-//				temp2.push_back('-');
-//				temp2.push_back(temp[3]);
-//				temp2.push_back(temp[4]);
-//				temp2.push_back('-');
-//				temp2.push_back(temp[5]);
-//				temp2.push_back(temp[6]);
-//				return temp2;
-				return "";
+				string temp = string(reinterpret_cast<char*>(lastWriteDate));//turn into a string
+				string temp2;
+				temp2.push_back(temp[1]);
+				temp2.push_back(temp[2]);
+				temp2.push_back('-');
+				temp2.push_back(temp[3]);
+				temp2.push_back(temp[4]);
+				temp2.push_back('-');
+				temp2.push_back(temp[5]);
+				temp2.push_back(temp[6]);
+				return temp2;
 			}
 
 			string getLastWriteTime() const {
-//				string temp = *reinterpret_cast<unsigned char*>(lastWriteTime);//turn into a string
-//				string temp2;
-//				for(int i =0; i<temp.size();++i){
-//					if(temp.size() == 3 && i=2){
-//						temp2.pushback[':']
-//					}
-//					temp2.pushback(temp[i]);
-//					/*how do we determine if it's am or pm?*/
-//				}
-//
-//				return temp2;
-				return "";
+				string temp = string(reinterpret_cast<char*>(lastWriteTime));//turn into a string
+				string temp2;
+
+				for (size_t i = 0; i < temp.size(); ++i) {
+					if (temp.size() == 3 && i == 2) {
+						temp2.push_back(':');
+					}
+
+					temp2.push_back(temp[i]);
+					/* how do we determine if it's am or pm? */
+				}
+
+				return temp2;
 			}
 
 			// Setting up basic print skeletons, mostly just messing with things to get a grip on it
