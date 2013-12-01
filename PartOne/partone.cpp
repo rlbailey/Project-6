@@ -94,6 +94,7 @@ struct Track {
 	// array of sectors .. ?
 };
 
+// Simulate a floppy disk
 struct Floppy {
 	struct FAT {
 		// FAT entry.
@@ -101,6 +102,7 @@ struct Floppy {
 		struct Entry {
 			Floppy *floppy;
 			short index;
+			byte *sector;
 			short next;	// The location of the next FAT entry.
 
 			Entry() : floppy(NULL), index(-1), next(UNUSED_SECTOR) { }
@@ -160,15 +162,15 @@ struct Floppy {
 
 		Entry* nextFreeEntry() {
 			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
-				if (UNUSED_SECTOR == entries[i].next) return &entries[i];
+				if (UNUSED_SECTOR == entries[i].next || LAST_SECTOR == entries[i].next) return &entries[i];
 			}
 
-			return NULL;
+			throw bad_alloc();
 		}
 
 		unsigned short nextFreeSector() {
 			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
-				if (UNUSED_SECTOR == entries[i].next) return 33 + i - 2;
+				if (UNUSED_SECTOR == entries[i].next || LAST_SECTOR == entries[i].next) return 33 + i - 2;
 			}
 
 			return -1;
@@ -328,7 +330,7 @@ struct Floppy {
 				if (EMPTY_DIR_ENTRY == entries[i].filename[0] || LAST_DIR_ENTRY == entries[i].filename[0])  return &entries[i];
 			}
 
-			return NULL;
+			throw bad_alloc();
 		}
 
 		// Not really needed, since struct access of members is public anyway
@@ -513,6 +515,6 @@ unsigned short fromTime(string date) {
 
 void checkTime(byte hour, byte minute) {
 	if (hour < 0 || hour > 23) throw out_of_range("Hour is out of range.");
-	if (minute < 0 || minute > 59) throw out_of_range("Directory entry day is out of range.");
+	if (minute < 0 || minute > 59) throw out_of_range("Minute is out of range.");
 }
 

@@ -20,11 +20,12 @@
 int main(void) {
 	Floppy floppy;
 
-	floppy.copy("CONSTITU.TXT");
-	floppy.copy("DECLARAT.TXT");
-	floppy.copy("EMILY.TXT");
+//	floppy.copy("CONSTITU.TXT");
+//	floppy.copy("DECLARAT.TXT");
+//	floppy.copy("EMILY.TXT");
+	floppy.copy("IO.SYS");
 	floppy.copy("GETTYSBU.TXT");
-	floppy.copy("SMALL.TXT");
+//	floppy.copy("SMALL.TXT");
 	floppy.copy("WHALE.TXT");
 
 	cout << floppy.rootDir;
