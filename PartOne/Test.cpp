@@ -57,9 +57,11 @@ protected:
 };
 
 TEST_F(DirectoryTest, FilenameTest) {
-	strcpy(reinterpret_cast<char*>(floppy.bytes + 9728), "GETTYSBU");	// TODO replace with proper method call to change filename.
+	floppy.rootDir.entries[0].initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0, 0, 0, (unsigned long)1193405);
 
-	EXPECT_STREQ("GETTYSBU", floppy.rootDir.entries[0].getFilename().c_str());
+	EXPECT_STREQ("WHALE", (char*)floppy.rootDir.entries[0].getFilename().c_str());
+	EXPECT_STREQ("TXT", (char*)floppy.rootDir.entries[0].getExtension().c_str());
+	EXPECT_EQ(1193405, floppy.rootDir.entries[0].fileSize);
 }
 
 class StringTest : public testing::Test {

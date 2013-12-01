@@ -20,8 +20,7 @@
 int main(void) {
 	Floppy floppy;
 
-	strcpy(reinterpret_cast<char*>(floppy.bytes + 9728), "WHALE");
-	*reinterpret_cast<unsigned long*>(floppy.bytes + 9728 + 28) = 1193405;
+	floppy.rootDir.entries[0].initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0, 0, 0, (unsigned long)1193405);
 
 	cout << floppy.rootDir;
 

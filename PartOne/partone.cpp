@@ -173,7 +173,7 @@ struct Floppy {
 					unsigned short ignore = 0, unsigned short lastWriteTime = 0,
 					unsigned short lastWriteDate = 0,
 					unsigned short firstLogicalSector = 0,
-					unsigned short fileSize = 0) {
+					unsigned long fileSize = 0) {
 				this->floppy = floppy;
 				offset = index * BYTES_PER_DIR_ENTRY;
 				strncpy((char*)this->filename, filename.c_str(), 8);
@@ -190,42 +190,16 @@ struct Floppy {
 				this->fileSize = fileSize;
 			}
 
+			// Required because a filename with chars in all 8 elements cannot hold a null-terminating char
 			string getFilename() const {
-				byte *temp = floppy->bytes + ROOT_DIR_BASE_BYTE + offset;
-
-				if (temp) return string(reinterpret_cast<char*>(temp), 8);
-
+				if (filename) return string((char*)filename, 8);
 				return "";
-
-		//		return string((char*)(floppy->memory)[directoryBase + offset]);
-		//		string s;
-		//
-		//
-		//
-		//		strncpy(s, floppy->memory[directoryBase + offset], 8);
-		//		return reinterpret_cast<char*>(floppy->memory[directoryBase + offset]);
-		//		char s[8];
-		//
-		//		strncpy(s, reinterpret_cast<const char*>(memory->memory + base + START_OF_ROOT_DIRECTORY), 8);
-		//
-		//		return s;
 			}
 
+			// Required because an extension with chars in all 3 elements cannot hold a null-terminating char
 			string getExtension() const {
-				byte *temp = floppy->bytes + ROOT_DIR_BASE_BYTE + offset + EXTENSION_OFFSET;
-
-				if (temp) return string(reinterpret_cast<char*>(temp), 3);
-
+				if (extension) return string((char*)extension, 3);
 				return "";
-
-		//		return string(reinterpret_cast<char*>(memory->memory[directoryBase + offset + extensionOffset]), 3);
-		//		return string((char*)(memory->memory) + directoryBase + offset + extensionOffset);
-		//		return reinterpret_cast<char*>(memory->memory[directoryBase + offset + extensionOffset]);
-			}
-
-			unsigned long getFileSize() const {
-				return *reinterpret_cast<unsigned long*>(floppy->bytes + ROOT_DIR_BASE_BYTE + offset + FILE_SIZE_OFFSET);
-		//		return floppy->floppy[directoryBase + offset + fileSizeOffset];
 			}
 
 			void rename(string newName){
@@ -239,7 +213,9 @@ struct Floppy {
 			}
 
 			string getLastWriteDate() const {
-				string temp = string(reinterpret_cast<char*>(lastWriteDate));//turn into a string
+				if (!lastWriteDate) return "";
+
+				string temp = string(reinterpret_cast<char*>(lastWriteDate));	// turn into a string
 				string temp2;
 				temp2.push_back(temp[1]);
 				temp2.push_back(temp[2]);
@@ -253,7 +229,9 @@ struct Floppy {
 			}
 
 			string getLastWriteTime() const {
-				string temp = string(reinterpret_cast<char*>(lastWriteTime));//turn into a string
+				if (!lastWriteTime) return "";
+
+				string temp = string(reinterpret_cast<char*>(lastWriteTime));	// turn into a string
 				string temp2;
 
 				for (size_t i = 0; i < temp.size(); ++i) {
@@ -281,10 +259,10 @@ struct Floppy {
 				// for(int i = 0; i < MaxFAT1Size; i++)
 				// if (fat[i] != 0x00 || 0xFF0 || 0xFF1 ...... || 0xFF6 || 0xFF7) has to be an easier cleaner way to do this check
 				Floppy::RootDir::Entry temp;
-				cout << temp.getFilename() << "	" << temp.getExtension() << "	" << temp.getFileSize() << "	" << temp.getLastWriteDate()
+				cout << temp.getFilename() << "	" << temp.getExtension() << "	" << temp.fileSize << "	" << temp.getLastWriteDate()
 				<< "	" << temp.getLastWriteTime() << endl;
 				counter++;
-				tempBytes += temp.getFileSize();
+				tempBytes += temp.fileSize;
 				// close if, close for
 				// Then we continue to go through FAT table, ignoring reserved, bad, and unused sectors until we reach the last.
 				cout << "	" << counter << " file(s)	" << tempBytes << " bytes" << endl;
@@ -337,12 +315,10 @@ inline ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 	for (size_t i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
 		Floppy::RootDir::Entry entry = rootDir.entries[i];
 
-		size_t rootDirIndex = ROOT_DIR_BASE_BYTE + entry.offset;
+		if (LAST_DIRECTORY == entry.filename[0]) break;
+		if (EMPTY_DIRECTORY == entry.filename[0]) continue;
 
-		if (LAST_DIRECTORY == entry.floppy->bytes[rootDirIndex]) break;
-		if (EMPTY_DIRECTORY == entry.floppy->bytes[rootDirIndex]) continue;
-
-		printf("%-8s %-3s %7lu %8s %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), entry.getFileSize(), entry.getLastWriteDate().c_str(), entry.getLastWriteTime().c_str());
+		printf("%-8s %-3s %7lu %8s %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), entry.fileSize, entry.getLastWriteDate().c_str(), entry.getLastWriteTime().c_str());
 	}
 
 	return out;
