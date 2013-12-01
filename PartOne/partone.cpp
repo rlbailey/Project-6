@@ -51,6 +51,7 @@
 #define LAST_WRITE_DATE_OFFSET 24
 #define FIRST_LOGICAL_SECTOR_OFFSET 26
 #define FILE_SIZE_OFFSET 28
+#define FAT_SECTOR_BASE 31
 
 typedef unsigned char byte;
 
@@ -99,30 +100,30 @@ struct Floppy {
 		// Composed of 12 bits.
 		struct Entry {
 			Floppy *floppy;
-			short offset;	// The logical start of an entry inside the Floppy.
-			short sector;	// The sector location of a file.
+			short index;
+			short next;	// The location of the next FAT entry.
 
-			Entry() : floppy(NULL), offset(-1), sector(UNUSED_SECTOR) { }
+			Entry() : floppy(NULL), index(-1), next(UNUSED_SECTOR) { }
 
 			void initialize(Floppy *floppy, int index) {
 				this->floppy = floppy;
-
-				offset = 3 * index / 2;
-
-				sector = UNUSED_SECTOR;
+				this->index = index;
+				next = UNUSED_SECTOR;
 			}
 
 			// Set the FAT entry to the specified value for both FAT tables in memory
 			Entry& operator=(const short &value) {
+				short offset = 3 * index / 2;	// The logical start of an entry inside the Floppy bytes.
+
 				// If the offset is an logical index outside the FAT
 				if (offset < 0 || offset > BYTES_PER_FAT) throw out_of_range("FAT entry offset is out of range.");
 
-				this->sector = value;
+				this->next = value;
 
 				short fat1EntryIndex = FAT1_BASE_BYTE + offset;
 				short fat2EntryIndex = FAT2_BASE_BYTE + offset;
 
-				if (offset % 3 == 0) {
+				if (index % 2 == 0) {
 					floppy->bytes[fat1EntryIndex] = value >> 4;
 					floppy->bytes[fat1EntryIndex + 1] &= 0xF;
 					floppy->bytes[fat1EntryIndex + 1] |= (value & 0xF) << 4;
@@ -159,7 +160,7 @@ struct Floppy {
 
 		Entry* nextFreeEntry() {
 			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
-				if (UNUSED_SECTOR == entries[i].sector) return &entries[i];
+				if (UNUSED_SECTOR == entries[i].next) return &entries[i];
 			}
 
 			return NULL;
@@ -167,7 +168,7 @@ struct Floppy {
 
 		unsigned short nextFreeSector() {
 			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
-				if (UNUSED_SECTOR == entries[i].sector) return 33 + i - 2;
+				if (UNUSED_SECTOR == entries[i].next) return 33 + i - 2;
 			}
 
 			return -1;
@@ -368,7 +369,6 @@ struct Floppy {
 			dirEntry = rootDir.nextFreeEntry();
 
 			short dot = filename.find('.');
-			char name[8];
 
 			strncpy(reinterpret_cast<char*>(dirEntry->filename), filename.substr(0, dot).c_str(), 8);
 			strncpy(reinterpret_cast<char*>(dirEntry->extension), filename.substr(dot + 1).c_str(), 3);
@@ -386,45 +386,29 @@ struct Floppy {
 			strftime(lastWriteTime, 6, "%H-%M", localtime(&fileStats.st_mtim.tv_sec));
 			strftime(lastWriteDate, 6, "%m-%d", localtime(&fileStats.st_mtim.tv_sec));
 
-//			printf("%s\n%s\n%s\n", createDate, lastAccessDate, lastWriteDate);
-//			printf("%s\n%s\n%s\n", /*ctime(&now),*/ ctime(&fileStats.st_atim.tv_sec), ctime(&fileStats.st_mtim.tv_sec));
 			dirEntry->createTime = fromTime(createTime);
 			dirEntry->createDate = fromDate(createDate);
 			dirEntry->lastAccessDate = fromDate(lastAccessDate);
 			dirEntry->lastWriteTime = fromTime(lastWriteTime);
 			dirEntry->lastWriteDate = fromDate(lastWriteDate);
-
 			dirEntry->fileSize = fileStats.st_size;
 
-//			return;
+			FAT::Entry *fatEntry = fat.nextFreeEntry();
+			long i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
 
-//			ctime(&fileStats.st_atim.tv_sec);
-//			ctime(&fileStats.st_atim);
-//			localtime(fileStats.st_atim);
+			while (!feof(f)) {
+				bytes[i++] = fgetc(f);
 
-//			printf("[%s]", createDate);
-//			printf("[%s]", ctime(&fileStats.st_atim.tv_sec));
-//			printf("[%s]", ctime(localtime(&fileStats.st_atim.tv_sec));
+				if (i % 512 == 0 && !feof(f)) {
+					FAT::Entry *temp = fat.nextFreeEntry();
 
-//			return;
-
-			FAT::Entry *fatEntry;
-			short sector;
-			long i = 0;
-
-			while (!feof(file)) {
-				if (i % 512 == 0) {
-					dirEntry = rootDir.nextFreeEntry();
-					fatEntry = fat.nextFreeEntry();
-
-
-//					FAT::Entry entry =
-					sector = fat.nextFreeSector();
-					i = 512 * sector;
+					fatEntry->next = temp->index;
+					fatEntry = temp;
+					i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
 				}
-
-				bytes[i++] = fgetc(file);
 			}
+
+			fatEntry->next = LAST_SECTOR;
 		} else {
 			perror("Error opening file.");
 		}
