@@ -6,17 +6,17 @@
 #include "partone.cpp"
 #include "gtest/gtest.h"
 
-class MemoryTest : public testing::Test {
+class FloppyTest : public testing::Test {
 protected:
-	MemoryTest(void) { }
-	~MemoryTest(void) { }
+	FloppyTest(void) { }
+	~FloppyTest(void) { }
 	virtual void SetUp(void) { }
 	virtual void TearDown(void) { }
 
 	Floppy floppy;
 };
 
-TEST_F(MemoryTest, LoadMemoryTest) {
+TEST_F(FloppyTest, LoadFloppyTest) {
 	char s[1024];
 
 	for (size_t i = 0; i < 512; ++i)
@@ -27,17 +27,17 @@ TEST_F(MemoryTest, LoadMemoryTest) {
 	ASSERT_STREQ("B8C0070520018ED0BC0010B8C0078ED8BE2200E89300BE4100E88D00BE6100E8870043532D444F53204F7065726174696E672053797374656D2076312E300D0A004372656174656420666F72204353333432332C2046616C6C20323031330D0A0028432920436F7079726967687420323031332062792052494348415244204241494C455920616E6420485545204D4F55412E20416C6C207269676874732072657365727665642E00B40EAC3C007404CD10EBF7C3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055AA", s);
 }
 
-class FileAllocationTableTest : public testing::Test {
+class FATTest : public testing::Test {
 protected:
-	FileAllocationTableTest(void) { }
-	~FileAllocationTableTest(void) { }
+	FATTest(void) { }
+	~FATTest(void) { }
 	virtual void SetUp(void) { }
 	virtual void TearDown(void) { }
 
 	Floppy floppy;
 };
 
-TEST_F(FileAllocationTableTest, DefaultConstructorTest) {
+TEST_F(FATTest, DefaultConstructorTest) {
 	EXPECT_EQ(floppy.bytes[512], 0xFF);
 	EXPECT_EQ(floppy.bytes[513], 0xF);
 	EXPECT_EQ(floppy.bytes[514], 0xF0);
@@ -56,12 +56,15 @@ protected:
 	Floppy floppy;
 };
 
-TEST_F(DirectoryTest, FilenameTest) {
-	floppy.rootDir.entries[0].initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0, 0, 0, (unsigned long)1193405);
+TEST_F(DirectoryTest, DirectoryEntryTest) {
+	Floppy::RootDir::Entry entry = floppy.rootDir.entries[0];
 
-	EXPECT_STREQ("WHALE", (char*)floppy.rootDir.entries[0].getFilename().c_str());
-	EXPECT_STREQ("TXT", (char*)floppy.rootDir.entries[0].getExtension().c_str());
-	EXPECT_EQ(1193405, floppy.rootDir.entries[0].fileSize);
+	entry.initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0, 0xB11, 0, (unsigned long)1193405);
+
+	EXPECT_STREQ("WHALE", (char*)entry.getFilename().c_str());
+	EXPECT_STREQ("TXT", (char*)entry.getExtension().c_str());
+	EXPECT_EQ(1193405, entry.fileSize);
+	EXPECT_EQ(0xB11, entry.lastWriteDate);
 }
 
 class StringTest : public testing::Test {
@@ -71,7 +74,7 @@ protected:
 
 	// Set up fixtures ONCE for EACH unit test.
 	virtual void SetUp(void) {
-		p1 = new string("Good-bye.");
+		p1 = new std::string("Good-bye.");
 	}
 
 	// Clean up fixtures after EACH unit test is done running.
@@ -79,8 +82,8 @@ protected:
 		delete p1;
 	}
 
-	string s1;
-	string *p1;
+	std::string s1;
+	std::string *p1;
 };
 
 // Unit test with a fixture (i.e., a pre-created object.)

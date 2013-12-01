@@ -6,6 +6,7 @@
 // File: partone.cpp
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
@@ -40,6 +41,11 @@
 typedef unsigned char byte;
 
 using namespace std;
+
+string toDate(unsigned short data);
+unsigned short fromDate(string date);
+void checkDate(byte month, byte day);
+byte maxDays(byte month);
 
 struct Sector {
 	// # bytes? 512
@@ -213,6 +219,7 @@ struct Floppy {
 			}
 
 			string getLastWriteDate() const {
+				return toDate(lastWriteDate);
 				if (!lastWriteDate) return "";
 
 				string temp = string(reinterpret_cast<char*>(lastWriteDate));	// turn into a string
@@ -318,8 +325,52 @@ inline ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 		if (LAST_DIRECTORY == entry.filename[0]) break;
 		if (EMPTY_DIRECTORY == entry.filename[0]) continue;
 
-		printf("%-8s %-3s %7lu %8s %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), entry.fileSize, entry.getLastWriteDate().c_str(), entry.getLastWriteTime().c_str());
+		printf("%-8s %-3s   %7lu %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), entry.fileSize, toDate(entry.lastWriteDate).c_str(), entry.getLastWriteTime().c_str());
 	}
 
 	return out;
+}
+
+string toDate(unsigned short data) {
+	byte month = data >> 8;
+	byte day = data & 0xFF;
+
+	checkDate(month, day);
+
+	char temp[9];
+
+	sprintf(temp, "%02i-%02i-2013", month, day);
+
+	return string(temp);
+}
+
+unsigned short fromDate(string date) {
+	byte month = atoi(date.substr(0, 2).c_str());
+	byte day = atoi(date.substr(3, 2).c_str());
+
+	checkDate(month, day);
+
+	return (month << 8) + day;
+}
+
+void checkDate(byte month, byte day) {
+	if (month < 1 || month > 12) throw out_of_range("Directory entry month is out of range.");
+	if (day < 1 || day > maxDays(month)) throw out_of_range("Directory entry day is out of range.");
+}
+
+byte maxDays(byte month) {
+	switch (month) {
+	case 2:
+		return 28;
+	case 1:
+	case 3:
+	case 5:
+	case 7:
+	case 8:
+	case 10:
+	case 12:
+		return 31;
+	default:
+		return 30;
+	}
 }

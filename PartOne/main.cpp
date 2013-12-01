@@ -20,7 +20,7 @@
 int main(void) {
 	Floppy floppy;
 
-	floppy.rootDir.entries[0].initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0, 0, 0, (unsigned long)1193405);
+	floppy.rootDir.entries[0].initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0, 0xB11, 0, (unsigned long)1193405);
 
 	cout << floppy.rootDir;
 
