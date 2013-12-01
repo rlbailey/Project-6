@@ -46,6 +46,8 @@ string toDate(unsigned short data);
 unsigned short fromDate(string date);
 void checkDate(byte month, byte day);
 byte maxDays(byte month);
+string toTime(unsigned short tim);
+unsigned short fromTime(string time);
 
 struct Sector {
 	// # bytes? 512
@@ -373,4 +375,9 @@ byte maxDays(byte month) {
 	default:
 		return 30;
 	}
+}
+
+string toTime(string time) {
+
+	return "";
 }
