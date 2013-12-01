@@ -7,6 +7,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <iostream>
 #include <stdexcept>
 
 #define FLP "fdd.flp"
@@ -266,6 +267,29 @@ struct Floppy {
 //				return temp2;
 				return "";
 			}
+
+			// Setting up basic print skeletons, mostly just messing with things to get a grip on it
+			void listDirectory() {
+				int counter = 0;	// counter will increment every time we post a file name
+				int tempBytes = 0;
+				cout << "Volume Serial Number is " << /* check how to generate this. */ endl;
+				cout << "Directory of C:\\ " <<endl;//should be the same regardless
+
+				// this next bit lists the file name, extension, file size, last date accessed, last time accessed for each file
+				// should need to ... step through FAT1, get physical location of file in directory, then grab the file info and print it as:
+				// fat[i] tells us where to go.  Now go to that location.  I'll call it temp for now
+				// for(int i = 0; i < MaxFAT1Size; i++)
+				// if (fat[i] != 0x00 || 0xFF0 || 0xFF1 ...... || 0xFF6 || 0xFF7) has to be an easier cleaner way to do this check
+				Floppy::RootDir::Entry temp;
+				cout << temp.getFilename() << "	" << temp.getExtension() << "	" << temp.getFileSize() << "	" << temp.getLastWriteDate()
+				<< "	" << temp.getLastWriteTime() << endl;
+				counter++;
+				tempBytes += temp.getFileSize();
+				// close if, close for
+				// Then we continue to go through FAT table, ignoring reserved, bad, and unused sectors until we reach the last.
+				cout << "	" << counter << " file(s)	" << tempBytes << " bytes" << endl;
+				cout << "			" << " bytes free" << endl;	// to calculate bytes free, keep track of unused sectors?
+			}
 		};
 
 		Floppy *floppy;
@@ -277,7 +301,7 @@ struct Floppy {
 			}
 		}
 
-		// Not really needed
+		// Not really needed, since struct access of members is public anyway
 		friend ostream& operator<<(ostream &out, const RootDir &rootDir);
 	};
 
@@ -308,7 +332,7 @@ struct Floppy {
 
 inline ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 	puts("Volume Serial Number is 0859-1A04\n");
-	puts("RootDirectory of C:\\\n\n");
+	puts("Directory of C:\\\n\n");
 
 	for (size_t i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
 		Floppy::RootDir::Entry entry = rootDir.entries[i];
@@ -322,26 +346,4 @@ inline ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 	}
 
 	return out;
-}
-
-//Setting up basic print skeletons, mostly just messing with things to get a grip on it
-void listDirectory(){
-	int counter = 0;//counter will inrement every time we post a file name
-	int tempBytes = 0;
-	cout << "Volume Serial Number is " <</* check how to generate this.*/ endl;
-	cout << "Directory of C:\ " <<endl;//should be the same regardless
-
-	//this next bit lists the file name, extention, file size, last date accessed, last time accessed for each file
-	//should need to...step through FAT1, get physical location of file in directory, then grab the file info and print it as:
-	//fat[i] tells us where to go. Now go to that location. I'll call it temp for now
-	//for(int i = 0; i<MaxFAT1Size; i++)
-	///if(fat[i] != 0x00 || 0xFF0 || 0xFF1......||0xFF6 || 0xFF7) has to be an easier clearner way to do this check
-	cout << temp.getFileName() << "	" << temp.getExtension() << "	" << temp.getFileSize() << "	" << temp.getLastWriteDate()
-	<< "	" << temp.getLastWriteTime() << endl;
-	counter++;
-	tempBytes += temp.getFileSize();
-	//close if, close for
-	//Then we continue to go through FAT table, ignoring rserved, bad and unusued sectors until we reach the last.
-	cout << "	" << counter << " file(s)	" << tempBytes << " bytes" << endl;
-	cout << "			" << " bytes free" << endl;//to calculate bytes free, keep track of unused sectors?
 }
