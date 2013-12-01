@@ -375,19 +375,23 @@ struct Floppy {
 
 			stat(filename.c_str(), &fileStats);
 
-			char createDate[6], lastAccessDate[6], lastWriteDate[6];
+			char createTime[6], createDate[6], lastAccessDate[6], lastWriteTime[6], lastWriteDate[6];
 			time_t now;
 
 			time(&now);
 
+			strftime(createTime, 6, "%H-%M", localtime(&now));
 			strftime(createDate, 6, "%m-%d", localtime(&now));
 			strftime(lastAccessDate, 6, "%m-%d", localtime(&fileStats.st_atim.tv_sec));
+			strftime(lastWriteTime, 6, "%H-%M", localtime(&fileStats.st_mtim.tv_sec));
 			strftime(lastWriteDate, 6, "%m-%d", localtime(&fileStats.st_mtim.tv_sec));
 
 //			printf("%s\n%s\n%s\n", createDate, lastAccessDate, lastWriteDate);
 //			printf("%s\n%s\n%s\n", /*ctime(&now),*/ ctime(&fileStats.st_atim.tv_sec), ctime(&fileStats.st_mtim.tv_sec));
+			dirEntry->createTime = fromTime(createTime);
 			dirEntry->createDate = fromDate(createDate);
 			dirEntry->lastAccessDate = fromDate(lastAccessDate);
+			dirEntry->lastWriteTime = fromTime(lastWriteTime);
 			dirEntry->lastWriteDate = fromDate(lastWriteDate);
 
 			dirEntry->fileSize = fileStats.st_size;

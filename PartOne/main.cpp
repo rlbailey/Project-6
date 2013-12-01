@@ -21,10 +21,11 @@ int main(void) {
 	Floppy floppy;
 
 	floppy.copy("CONSTITU.TXT");
-
-//	floppy.rootDir.entries[0].initialize(&floppy, 0, "IO", "SYS", 0, 0, 0, 0, 0, 0, 0x500, 0xB0B, 0, (unsigned long)13454);
-//	floppy.rootDir.entries[1].initialize(&floppy, 0, "GETTYSBU", "TXT", 0, 0, 0, 0, 0, 0, 0xE0F, 0xB13, 0, (unsigned long)1287);
-//	floppy.rootDir.entries[2].initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0xF21, 0xB11, 0, (unsigned long)1193405);
+	floppy.copy("DECLARAT.TXT");
+	floppy.copy("EMILY.TXT");
+	floppy.copy("GETTYSBU.TXT");
+	floppy.copy("SMALL.TXT");
+	floppy.copy("WHALE.TXT");
 
 	cout << floppy.rootDir;
 
