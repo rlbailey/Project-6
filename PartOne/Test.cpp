@@ -46,25 +46,48 @@ TEST_F(FATTest, DefaultConstructorTest) {
 	EXPECT_EQ(floppy.bytes[5122], 0xF0);
 }
 
-class DirectoryTest : public testing::Test {
+class DirTest : public testing::Test {
 protected:
-	DirectoryTest(void) { }
-	~DirectoryTest(void) { }
-	virtual void SetUp(void) { }
+	DirTest(void) { }
+	~DirTest(void) { }
+	virtual void SetUp(void)
+	{
+		floppy.rootDir.entries[0].initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0xF21, 0XB11, 0, (unsigned long)1193405);
+		entry = floppy.rootDir.entries[0];
+	}
+
 	virtual void TearDown(void) { }
 
 	Floppy floppy;
+	Floppy::RootDir::Entry entry;
 };
 
-TEST_F(DirectoryTest, DirectoryEntryTest) {
-	Floppy::RootDir::Entry entry = floppy.rootDir.entries[0];
-
-	entry.initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0, 0xB11, 0, (unsigned long)1193405);
-
+TEST_F(DirTest, FilenameTest) {
 	EXPECT_STREQ("WHALE", (char*)entry.getFilename().c_str());
+}
+
+TEST_F(DirTest, ExtensionTest) {
 	EXPECT_STREQ("TXT", (char*)entry.getExtension().c_str());
+}
+
+TEST_F(DirTest, FileSizeTest) {
 	EXPECT_EQ(1193405, entry.fileSize);
+}
+
+TEST_F(DirTest, LastWriteDateTest) {
 	EXPECT_EQ(0xB11, entry.lastWriteDate);
+}
+
+TEST_F(DirTest, LastWriteTimeTest) {
+	EXPECT_EQ(0xF21, entry.lastWriteTime);
+}
+
+TEST_F(DirTest, ToDateTest) {
+	EXPECT_STREQ("11-17-13", toDate(entry.lastWriteDate).c_str());
+}
+
+TEST_F(DirTest, ToTimeTest) {
+	EXPECT_STREQ(" 3:33p", toTime(entry.lastWriteTime).c_str());
 }
 
 class StringTest : public testing::Test {

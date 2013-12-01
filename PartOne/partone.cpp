@@ -48,6 +48,7 @@ void checkDate(byte month, byte day);
 byte maxDays(byte month);
 string toTime(unsigned short tim);
 unsigned short fromTime(string time);
+void checkTime(byte hour, byte minute);
 
 struct Sector {
 	// # bytes? 512
@@ -327,7 +328,7 @@ inline ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 		if (LAST_DIRECTORY == entry.filename[0]) break;
 		if (EMPTY_DIRECTORY == entry.filename[0]) continue;
 
-		printf("%-8s %-3s   %7lu %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), entry.fileSize, toDate(entry.lastWriteDate).c_str(), entry.getLastWriteTime().c_str());
+		printf("%-8s %-3s   %7lu %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), entry.fileSize, toDate(entry.lastWriteDate).c_str(), toTime(entry.lastWriteTime).c_str());
 	}
 
 	return out;
@@ -341,7 +342,7 @@ string toDate(unsigned short data) {
 
 	char temp[9];
 
-	sprintf(temp, "%02i-%02i-2013", month, day);
+	sprintf(temp, "%2i-%02i-13", month, day);
 
 	return string(temp);
 }
@@ -356,8 +357,8 @@ unsigned short fromDate(string date) {
 }
 
 void checkDate(byte month, byte day) {
-	if (month < 1 || month > 12) throw out_of_range("Directory entry month is out of range.");
-	if (day < 1 || day > maxDays(month)) throw out_of_range("Directory entry day is out of range.");
+	if (month < 1 || month > 12) throw out_of_range("Month is out of range.");
+	if (day < 1 || day > maxDays(month)) throw out_of_range("Day is out of range.");
 }
 
 byte maxDays(byte month) {
@@ -377,7 +378,35 @@ byte maxDays(byte month) {
 	}
 }
 
-string toTime(string time) {
+string toTime(unsigned short data) {
+	byte hour = data >> 8;
+	byte minute = data & 0xFF;
 
-	return "";
+	checkTime(hour, minute);
+
+	char temp[9];
+	char suffix = hour < 12 ? 'a' : 'p';
+
+	hour %= 12;
+
+	if (0 == hour) hour += 12;
+
+	sprintf(temp, "%2i:%02i%c", hour, minute, suffix);
+
+	return string(temp);
 }
+
+unsigned short fromTime(string date) {
+	byte hour = atoi(date.substr(0, 2).c_str());
+	byte minute = atoi(date.substr(3, 2).c_str());
+
+	checkTime(hour, minute);
+
+	return (hour << 8) + minute;
+}
+
+void checkTime(byte hour, byte minute) {
+	if (hour < 0 || hour > 23) throw out_of_range("Hour is out of range.");
+	if (minute < 0 || minute > 59) throw out_of_range("Directory entry day is out of range.");
+}
+
