@@ -17,19 +17,13 @@
 //Implement print methods for FAT, Directory, Sectorand Disk Usage
 //A Main method that will call all of these?
 
-int main(void)
-{
+int main(void) {
 	Floppy floppy;
 
-	FileAllocationTable fat(&floppy);
-
-	RootDirectory directory(&floppy);
-
-	directory.setOffset(0);
 	strcpy(reinterpret_cast<char*>(floppy.bytes + 9728), "WHALE");
 	*reinterpret_cast<unsigned long*>(floppy.bytes + 9728 + 28) = 1193405;
 
-	cout << directory;
+	cout << floppy.rootDir;
 
 	return 0;
 }

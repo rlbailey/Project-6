@@ -6,8 +6,6 @@
 #include "partone.cpp"
 #include "gtest/gtest.h"
 
-using namespace std;
-
 class MemoryTest : public testing::Test {
 protected:
 	MemoryTest(void) { }
@@ -31,13 +29,12 @@ TEST_F(MemoryTest, LoadMemoryTest) {
 
 class FileAllocationTableTest : public testing::Test {
 protected:
-	FileAllocationTableTest(void) : fat(&floppy) { }
+	FileAllocationTableTest(void) { }
 	~FileAllocationTableTest(void) { }
 	virtual void SetUp(void) { }
 	virtual void TearDown(void) { }
 
 	Floppy floppy;
-	FileAllocationTable fat;
 };
 
 TEST_F(FileAllocationTableTest, DefaultConstructorTest) {
@@ -51,19 +48,18 @@ TEST_F(FileAllocationTableTest, DefaultConstructorTest) {
 
 class DirectoryTest : public testing::Test {
 protected:
-	DirectoryTest(void) : directory(&floppy) { }
+	DirectoryTest(void) { }
 	~DirectoryTest(void) { }
 	virtual void SetUp(void) { }
 	virtual void TearDown(void) { }
 
 	Floppy floppy;
-	RootDirectory directory;
 };
 
 TEST_F(DirectoryTest, FilenameTest) {
 	strcpy(reinterpret_cast<char*>(floppy.bytes + 9728), "GETTYSBU");	// TODO replace with proper method call to change filename.
 
-	EXPECT_STREQ("GETTYSBU", directory.getFilename().c_str());
+	EXPECT_STREQ("GETTYSBU", floppy.rootDir.entries[0].getFilename().c_str());
 }
 
 class StringTest : public testing::Test {
