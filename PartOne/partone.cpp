@@ -5,16 +5,30 @@
 // Date: 12/2/2013
 // File: partone.cpp
 
+#include <sys/stat.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <stdexcept>
+#include <string>
+
+//#include <stdio.h>
+
+//#include <sys/stat.h>
+////#include <time.h>
+//#include <cstdio>
+//#include <cstdlib>
+//#include <cstring>
+//#include <iostream>
+//#include <stdexcept>
+////#include <stdio.h>
 
 #define FLP "fdd.flp"
 #define BYTES_IN_FLOPPY 1474560
 #define BYTES_PER_FAT 4608
-#define NUM_OF_FAT_ENTRIES 384
+#define NUM_OF_FAT_ENTRIES 3072
 #define FAT1_BASE_BYTE 512
 #define FAT2_BASE_BYTE 5120
 #define UNUSED_SECTOR 0x0
@@ -24,8 +38,8 @@
 #define BYTES_PER_DIR_ENTRY 32
 #define NUM_OF_DIR_ENTRIES 224
 #define ROOT_DIR_BASE_BYTE 9728
-#define EMPTY_DIRECTORY 0xE5
-#define LAST_DIRECTORY 0x00
+#define EMPTY_DIR_ENTRY 0xE5
+#define LAST_DIR_ENTRY 0x00
 #define EXTENSION_OFFSET 8
 #define ATTRIBUTES_OFFSET 11
 #define RESERVED_OFFSET 12
@@ -46,7 +60,7 @@ string toDate(unsigned short data);
 unsigned short fromDate(string date);
 void checkDate(byte month, byte day);
 byte maxDays(byte month);
-string toTime(unsigned short tim);
+string toTime(unsigned short time);
 unsigned short fromTime(string time);
 void checkTime(byte hour, byte minute);
 
@@ -134,13 +148,29 @@ struct Floppy {
 		Entry entries[NUM_OF_FAT_ENTRIES];
 
 		FAT(Floppy *floppy) : floppy(floppy) {
-			for (size_t i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
+			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
 				entries[i].initialize(floppy, i);
 			}
 
 			// Reserve these sectors
 			entries[0] = RESERVED_SECTOR;
 			entries[1] = RESERVED_SECTOR;
+		}
+
+		Entry* nextFreeEntry() {
+			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
+				if (UNUSED_SECTOR == entries[i].sector) return &entries[i];
+			}
+
+			return NULL;
+		}
+
+		unsigned short nextFreeSector() {
+			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
+				if (UNUSED_SECTOR == entries[i].sector) return 33 + i - 2;
+			}
+
+			return -1;
 		}
 
 		// so how do we take this from bytes to bits
@@ -244,7 +274,7 @@ struct Floppy {
 				string temp = string(reinterpret_cast<char*>(lastWriteTime));	// turn into a string
 				string temp2;
 
-				for (size_t i = 0; i < temp.size(); ++i) {
+				for (byte i = 0; i < temp.size(); ++i) {
 					if (temp.size() == 3 && i == 2) {
 						temp2.push_back(':');
 					}
@@ -284,9 +314,20 @@ struct Floppy {
 		Entry entries[NUM_OF_DIR_ENTRIES];
 
 		RootDir(Floppy *floppy) : floppy(floppy) {
-			for (size_t i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
+			for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
 				entries[i].initialize(floppy, i);
+			}//	floppy.rootDir.entries[0].initialize(&floppy, 0, "IO", "SYS", 0, 0, 0, 0, 0, 0, 0x500, 0xB0B, 0, (unsigned long)13454);
+			//	floppy.rootDir.entries[1].initialize(&floppy, 0, "GETTYSBU", "TXT", 0, 0, 0, 0, 0, 0, 0xE0F, 0xB13, 0, (unsigned long)1287);
+			//	floppy.rootDir.entries[2].initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0xF21, 0xB11, 0, (unsigned long)1193405);
+
+		}
+
+		Entry* nextFreeEntry() {
+			for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
+				if (EMPTY_DIR_ENTRY == entries[i].filename[0] || LAST_DIR_ENTRY == entries[i].filename[0])  return &entries[i];
 			}
+
+			return NULL;
 		}
 
 		// Not really needed, since struct access of members is public anyway
@@ -299,37 +340,105 @@ struct Floppy {
 	RootDir rootDir;
 
 	Floppy(void) : fat(this), rootDir(this) {
-		LoadFloppy();
+		loadFloppy();
 	}
 
 	// Loads the floppy disk image into floppy
-	void LoadFloppy() {
+	void loadFloppy() {
 		file = fopen(FLP, "rwb");
 
-		if (NULL == file) {
-			perror("Error opening file.");
-		} else {
-			size_t i = 0;
+		if (file) {
+			long i = 0;
 
 			while (!feof(file)) {
 				bytes[i++] = fgetc(file);
 			}
+		} else {
+			perror("Error opening file.");
+		}
+	}
+
+	void copy(string filename) {
+		FILE *f = fopen(filename.c_str(), "rb");
+
+		if (f) {
+			RootDir::Entry *dirEntry;
+			struct stat fileStats;
+
+			dirEntry = rootDir.nextFreeEntry();
+
+			short dot = filename.find('.');
+			char name[8];
+
+			strncpy(reinterpret_cast<char*>(dirEntry->filename), filename.substr(0, dot).c_str(), 8);
+			strncpy(reinterpret_cast<char*>(dirEntry->extension), filename.substr(dot + 1).c_str(), 3);
+
+			stat(filename.c_str(), &fileStats);
+
+			char createDate[6], lastAccessDate[6], lastWriteDate[6];
+			time_t now;
+
+			time(&now);
+
+			strftime(createDate, 6, "%m-%d", localtime(&now));
+			strftime(lastAccessDate, 6, "%m-%d", localtime(&fileStats.st_atim.tv_sec));
+			strftime(lastWriteDate, 6, "%m-%d", localtime(&fileStats.st_mtim.tv_sec));
+
+//			printf("%s\n%s\n%s\n", createDate, lastAccessDate, lastWriteDate);
+//			printf("%s\n%s\n%s\n", /*ctime(&now),*/ ctime(&fileStats.st_atim.tv_sec), ctime(&fileStats.st_mtim.tv_sec));
+			dirEntry->createDate = fromDate(createDate);
+			dirEntry->lastAccessDate = fromDate(lastAccessDate);
+			dirEntry->lastWriteDate = fromDate(lastWriteDate);
+
+			dirEntry->fileSize = fileStats.st_size;
+
+//			return;
+
+//			ctime(&fileStats.st_atim.tv_sec);
+//			ctime(&fileStats.st_atim);
+//			localtime(fileStats.st_atim);
+
+//			printf("[%s]", createDate);
+//			printf("[%s]", ctime(&fileStats.st_atim.tv_sec));
+//			printf("[%s]", ctime(localtime(&fileStats.st_atim.tv_sec));
+
+//			return;
+
+			FAT::Entry *fatEntry;
+			short sector;
+			long i = 0;
+
+			while (!feof(file)) {
+				if (i % 512 == 0) {
+					dirEntry = rootDir.nextFreeEntry();
+					fatEntry = fat.nextFreeEntry();
+
+
+//					FAT::Entry entry =
+					sector = fat.nextFreeSector();
+					i = 512 * sector;
+				}
+
+				bytes[i++] = fgetc(file);
+			}
+		} else {
+			perror("Error opening file.");
 		}
 	}
 };
 
-inline ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
+ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 	byte numOfFiles = 0;
-	unsigned long bytesUsed = 0;
+	long bytesUsed = 0;
 
 	puts("Volume Serial Number is 0859-1A04\n");
 	puts("Directory of C:\\\n\n");
 
-	for (size_t i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
+	for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
 		Floppy::RootDir::Entry entry = rootDir.entries[i];
 
-		if (LAST_DIRECTORY == entry.filename[0]) break;
-		if (EMPTY_DIRECTORY == entry.filename[0]) continue;
+		if (LAST_DIR_ENTRY == entry.filename[0]) break;
+		if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
 
 		printf("%-8s %-3s   %7lu %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), entry.fileSize, toDate(entry.lastWriteDate).c_str(), toTime(entry.lastWriteTime).c_str());
 
@@ -398,7 +507,7 @@ string toTime(unsigned short data) {
 
 	hour %= 12;
 
-	if (0 == hour) hour += 12;
+	if (0 == hour) hour = 12;
 
 	sprintf(temp, "%2i:%02i%c", hour, minute, suffix);
 

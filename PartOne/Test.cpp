@@ -90,6 +90,19 @@ TEST_F(DirTest, ToTimeTest) {
 	EXPECT_STREQ(" 3:33p", toTime(entry.lastWriteTime).c_str());
 }
 
+TEST_F(DirTest, CopyTest) {
+	Floppy f;
+	Floppy::RootDir::Entry *entry = &f.rootDir.entries[0];
+
+	f.copy("CONSTITU.TXT");
+
+	EXPECT_STREQ("CONSTITU", (char*)entry->getFilename().c_str());
+	EXPECT_STREQ("TXT", (char*)entry->getExtension().c_str());
+	EXPECT_EQ(1287, entry->fileSize);
+	EXPECT_EQ(fromDate("11-19"), entry->lastWriteDate);
+	EXPECT_EQ(fromDate("12-01"), entry->lastAccessDate);
+}
+
 class StringTest : public testing::Test {
 protected:
 	StringTest(void) : s1("Hello World!"), p1(NULL) { }
