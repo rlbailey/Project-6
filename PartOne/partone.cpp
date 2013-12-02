@@ -44,13 +44,13 @@ typedef unsigned char byte;
 
 using namespace std;
 
-string toDate(ushort data);
+string toDate(ushort date);
 ushort fromDate(string date);
 void checkDate(byte month, byte day, byte year);
 byte maxDays(byte month);
 string toTime(ushort time);
 ushort fromTime(string time);
-void checkTime(byte hour, byte minute);
+void checkTime(byte hour, byte minute, byte second, char suffix);
 
 struct Sector {
 	// # bytes? 512
@@ -384,7 +384,7 @@ struct Floppy {
 		struct stat fileStats;	// Stores file attributes.
 		time_t n;	// The current time.
 		struct tm *now, *access, *write;	// Time structs of file attributes.
-		char createTime[6], createDate[6], lastAccessDate[6], lastWriteTime[6], lastWriteDate[6];	// Temporary buffers.
+		char createTime[11], createDate[11], lastAccessDate[11], lastWriteTime[11], lastWriteDate[11];	// Temporary buffers.
 		FAT::Entry *fatEntry = fat.nextFreeEntry();
 		ulong i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
 
@@ -397,11 +397,11 @@ struct Floppy {
 		write = localtime(&fileStats.st_mtim.tv_sec);
 
 		// Format the time into a string that can be used to convert into the attributes of a directory entry.
-		strftime(createTime, 6, "%H-%M", now);
-		strftime(createDate, 6, "%m-%d", now);
-		strftime(lastAccessDate, 6, "%m-%d", access);
-		strftime(lastWriteTime, 6, "%H-%M", write);
-		strftime(lastWriteDate, 6, "%m-%d", write);
+		strftime(createTime, 11, "%I:%M:%S%p", now);
+		strftime(createDate, 11, "%m-%d-%Y", now);
+		strftime(lastAccessDate, 11, "%m-%d-%Y", access);
+		strftime(lastWriteTime, 11, "%I:%M:%S%p", write);
+		strftime(lastWriteDate, 11, "%m-%d-%Y", write);
 
 		// Copy possibly non-null-terminated chars.
 		strncpy((char*)dirEntry->filename, filename.substr(0, dot).c_str(), 8);
@@ -459,10 +459,10 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 	return out;
 }
 
-string toDate(ushort data) {
-	byte day = data >> 11;
-	byte month = (data >> 7) & 0xF;
-	byte year = data & 0x7F;
+string toDate(ushort date) {
+	byte day = date >> 11;
+	byte month = (date >> 7) & 0xF;
+	byte year = date & 0x7F;
 
 	checkDate(month, day, year);
 
@@ -470,17 +470,17 @@ string toDate(ushort data) {
 
 	sprintf(temp, "%2i-%02i-%04i", month, day, 1980 + year);
 
-	return string(temp);
+	return temp;
 }
 
 ushort fromDate(string date) {
 	byte month = atoi(date.substr(0, 2).c_str());
 	byte day = atoi(date.substr(3, 2).c_str());
-	byte year = atoi(date.substr(6, 4).c_str());
+	byte year = atoi(date.substr(6, 4).c_str()) - 1980;
 
 	checkDate(month, day, year);
 
-	return (day << 11) + (month << 5) + (year - 1980);
+	return (day << 11) + (month << 7) + year;
 }
 
 void checkDate(byte month, byte day, byte year) {
@@ -506,35 +506,43 @@ byte maxDays(byte month) {
 	}
 }
 
-string toTime(ushort data) {
-	byte hour = data >> 8;
-	byte minute = data & 0xFF;
+string toTime(ushort time) {
+	byte hour = time >> 11;
+	byte minute = (time >> 5) & 0x3F;
+	byte second = 2 * (time & 0x1F);
+	char suffix = (hour < 12 ? 'a' : 'p');
 
-	checkTime(hour, minute);
-
-	char temp[9];
-	char suffix = hour < 12 ? 'a' : 'p';
-
+	checkTime(hour, minute, second, suffix);
 	hour %= 12;
 
 	if (0 == hour) hour = 12;
 
-	sprintf(temp, "%2i:%02i%c", hour, minute, suffix);
+	char temp[9];
 
-	return string(temp);
+	sprintf(temp, "%2i:%02i:%02i%c", hour, minute, second, suffix);
+
+	return temp;
 }
 
-ushort fromTime(string date) {
-	byte hour = atoi(date.substr(0, 2).c_str());
-	byte minute = atoi(date.substr(3, 2).c_str());
+ushort fromTime(string time) {
+	byte hour = atoi(time.substr(0, 2).c_str());
+	byte minute = atoi(time.substr(3, 2).c_str());
+	byte second = atoi(time.substr(6, 2).c_str());
+	char suffix = tolower(time.substr(8, 1)[0]);
 
-	checkTime(hour, minute);
+	checkTime(hour, minute, second, suffix);
 
-	return (hour << 8) + minute;
+	if ('p' == suffix) hour += 12;
+
+	second /= 2;
+
+	return (hour << 11) + (minute << 5) + second;
 }
 
-void checkTime(byte hour, byte minute) {
-	if (hour < 0 || hour > 23) throw out_of_range("Hour is out of range.");
-	if (minute < 0 || minute > 59) throw out_of_range("Minute is out of range.");
+void checkTime(byte hour, byte minute, byte second, char suffix) {
+	if (hour > 23) throw out_of_range("Hour is out of range.");
+	if (minute > 59) throw out_of_range("Minute is out of range.");
+	if (second > 59) throw out_of_range("Second is out of range.");
+	if ('a' != suffix && 'p' != suffix) throw invalid_argument("Incorrect time modifier (i.e., am or pm).");
 }
 
