@@ -9,21 +9,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <iostream>
 #include <stdexcept>
-#include <string>
-
-//#include <stdio.h>
-
-//#include <sys/stat.h>
-////#include <time.h>
-//#include <cstdio>
-//#include <cstdlib>
-//#include <cstring>
-//#include <iostream>
-//#include <stdexcept>
-////#include <stdio.h>
 
 #define FLP "fdd.flp"
 #define BYTES_IN_FLOPPY 1474560
@@ -57,12 +44,12 @@ typedef unsigned char byte;
 
 using namespace std;
 
-string toDate(unsigned short data);
-unsigned short fromDate(string date);
+string toDate(ushort data);
+ushort fromDate(string date);
 void checkDate(byte month, byte day);
 byte maxDays(byte month);
-string toTime(unsigned short time);
-unsigned short fromTime(string time);
+string toTime(ushort time);
+ushort fromTime(string time);
 void checkTime(byte hour, byte minute);
 
 struct Sector {
@@ -100,58 +87,76 @@ struct Floppy {
 		// FAT entry.
 		// Composed of 12 bits.
 		struct Entry {
-			Floppy *floppy;
 			short index;
-			byte *sector;
-			short next;	// The location of the next FAT entry.
+			byte *fat1Sector, *fat2Sector;	// pointer alias to the actual byte in Floppy
 
-			Entry() : floppy(NULL), index(-1), next(UNUSED_SECTOR) { }
+			Entry(void) : index(-1), fat1Sector(NULL), fat2Sector(NULL) { }
 
-			void initialize(Floppy *floppy, int index) {
-				this->floppy = floppy;
+			void initialize(Floppy &floppy, int index) {
+				ushort offset = 3 * index / 2;
+
 				this->index = index;
-				next = UNUSED_SECTOR;
+				fat1Sector = floppy.bytes + FAT1_BASE_BYTE + offset;
+				fat2Sector = floppy.bytes + FAT2_BASE_BYTE + offset;
+				*this = UNUSED_SECTOR;
 			}
 
-			// Set the FAT entry to the specified value for both FAT tables in memory
-			Entry& operator=(const short &value) {
-				short offset = 3 * index / 2;	// The logical start of an entry inside the Floppy bytes.
+			/*
+			 * Overload = operator.
+			 * Set the 12-bit FAT entry to the specified value for both FAT tables in memory
+			 * Bit packing applies.
+			 */
+			Entry& operator=(const ushort &value) {
+				if (!fat1Sector || !fat2Sector) {
+					string s = "FAT entry " + index;
 
-				// If the offset is an logical index outside the FAT
-				if (offset < 0 || offset > BYTES_PER_FAT) throw out_of_range("FAT entry offset is out of range.");
-
-				this->next = value;
-
-				short fat1EntryIndex = FAT1_BASE_BYTE + offset;
-				short fat2EntryIndex = FAT2_BASE_BYTE + offset;
+					s += " was not initialized";
+					perror(s.c_str());
+					throw exception();
+				}
 
 				if (index % 2 == 0) {
-					floppy->bytes[fat1EntryIndex] = value >> 4;
-					floppy->bytes[fat1EntryIndex + 1] &= 0xF;
-					floppy->bytes[fat1EntryIndex + 1] |= (value & 0xF) << 4;
+					// if this FAT entry uses 1 byte + the 4 MSB of the next byte
+					fat1Sector[0] = value >> 4;
+					fat1Sector[1] &= 0xF;
+					fat1Sector[1] |= (value & 0xF) << 4;
 
-					floppy->bytes[fat2EntryIndex] = value >> 4;
-					floppy->bytes[fat2EntryIndex + 1] &= 0xF;
-					floppy->bytes[fat2EntryIndex + 1] |= (value & 0xF) << 4;
+					fat2Sector[0] = value >> 4;
+					fat2Sector[1] &= 0xF;
+					fat2Sector[1] |= (value & 0xF) << 4;
 				} else {
-					floppy->bytes[fat1EntryIndex] &= 0xF0;
-					floppy->bytes[fat1EntryIndex] |= value >> 8;
-					floppy->bytes[fat1EntryIndex + 1] = value & 0xFF;
+					// if this FAT entry uses the 4 LSB of this byte + the next byte
+					fat1Sector[0] &= 0xF0;
+					fat1Sector[0] |= value >> 8;
+					fat1Sector[1] = value & 0xFF;
 
-					floppy->bytes[fat2EntryIndex] &= 0xF0;
-					floppy->bytes[fat2EntryIndex] |= value >> 8;
-					floppy->bytes[fat2EntryIndex + 1] = value & 0xFF;
+					fat2Sector[0] &= 0xF0;
+					fat2Sector[0] |= value >> 8;
+					fat2Sector[1] = value & 0xFF;
 				}
 
 				return *this;
 			}
+
+			/*
+			 * Overload dereference operator.
+			 * Retrieves the 12-bit FAT entry value.
+			 * This value "points" to the next FAT entry.
+			 * Bit packing applies
+			 */
+			ushort operator*(void) const {
+				if (index % 2) {
+					return (fat1Sector[0] << 4) + (fat1Sector[1] >> 4);
+				} else {
+					return (fat1Sector[0] & 0xF << 8) + fat1Sector[1];
+				}
+			}
 		};
 
-		Floppy *floppy;
 		Entry entries[NUM_OF_FAT_ENTRIES];
 
-		FAT(Floppy *floppy) : floppy(floppy) {
-			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
+		FAT(Floppy &floppy) {
+			for (ushort i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
 				entries[i].initialize(floppy, i);
 			}
 
@@ -160,20 +165,13 @@ struct Floppy {
 			entries[1] = RESERVED_SECTOR;
 		}
 
-		Entry* nextFreeEntry() {
-			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
-				if (UNUSED_SECTOR == entries[i].next || LAST_SECTOR == entries[i].next) return &entries[i];
+		Entry* nextFreeEntry(void) {
+			for (ushort i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
+				if (UNUSED_SECTOR == *entries[i].fat1Sector || LAST_SECTOR == *entries[i].fat1Sector) return &entries[i];
 			}
 
-			throw bad_alloc();
-		}
-
-		unsigned short nextFreeSector() {
-			for (short i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
-				if (UNUSED_SECTOR == entries[i].next || LAST_SECTOR == entries[i].next) return 33 + i - 2;
-			}
-
-			return -1;
+			perror("There are no more FAT entries available.");
+			throw exception();
 		}
 
 		// so how do we take this from bytes to bits
@@ -185,63 +183,54 @@ struct Floppy {
 
 	struct RootDir {
 		struct Entry {
-			Floppy *floppy;
-			int offset;
-			byte filename[8];
-			byte extension[3];
-			byte attributes;
-			unsigned short reserved;
-			unsigned short createTime;
-			unsigned short createDate;
-			unsigned short lastAccessDate;
-			unsigned short ignore;
-			unsigned short lastWriteTime;
-			unsigned short lastWriteDate;
-			unsigned short firstLogicalSector;
-			unsigned long fileSize;
+			// All these attributes are point aliases to their actual byte in Floppy.
+			byte *filename, *extension, *attributes;
+			ushort *reserved, *createTime, *createDate, *lastAccessDate, *ignore, *lastWriteTime, *lastWriteDate, *firstLogicalSector;
+			uint *fileSize;
 
-			Entry(void) :
-					floppy(NULL), offset(-1), /*filename(NULL), extension(NULL),*/ attributes(
-							0), reserved(0), createTime(0), createDate(0), lastAccessDate(
-							0), ignore(0), lastWriteTime(0), lastWriteDate(0), firstLogicalSector(
-							0), fileSize(0) {
+			void initialize(Floppy &floppy, byte index) {
+				// This is the byte position in Floppy offset by the root directory location and the index of this directory entry.
+				byte *entryBase = floppy.bytes + ROOT_DIR_BASE_BYTE + index * BYTES_PER_DIR_ENTRY;
+
+				filename = entryBase;
+				extension = entryBase + EXTENSION_OFFSET;
+				attributes = entryBase + ATTRIBUTES_OFFSET;
+
+				/*
+				 * The following pointers are sized to fit their data.
+				 * However, Floppy has byte-sized pointers.
+				 * These reinterpret_cast calls tell the following pointers that they should resize the byte pointers to suit their needs.
+				 * We're working at a low-level that allows us to cross the byte pointer boundaries.
+				 */
+				reserved = reinterpret_cast<ushort*>(entryBase + RESERVED_OFFSET);
+				createTime = reinterpret_cast<ushort*>(entryBase + CREATE_TIME_OFFSET);
+				createDate = reinterpret_cast<ushort*>(entryBase + CREATE_DATE_OFFSET);
+				lastAccessDate = reinterpret_cast<ushort*>(entryBase + LAST_ACCESS_OFFSET);
+				ignore = reinterpret_cast<ushort*>(entryBase + IGNORE_OFFSET);
+				lastWriteTime = reinterpret_cast<ushort*>(entryBase + LAST_WRITE_TIME_OFFSET);
+				lastWriteDate = reinterpret_cast<ushort*>(entryBase + LAST_WRITE_DATE_OFFSET);
+				firstLogicalSector = reinterpret_cast<ushort*>(entryBase + FIRST_LOGICAL_SECTOR_OFFSET);
+				fileSize = reinterpret_cast<uint*>(entryBase + FILE_SIZE_OFFSET);
 			}
 
-			void initialize(Floppy *floppy, int index, string filename = "",
-					string extension = "", byte attributes = 0,
-					unsigned short reserved = 0, unsigned short createTime = 0,
-					unsigned short createDate = 0,
-					unsigned short lastAccessDate = 0,
-					unsigned short ignore = 0, unsigned short lastWriteTime = 0,
-					unsigned short lastWriteDate = 0,
-					unsigned short firstLogicalSector = 0,
-					unsigned long fileSize = 0) {
-				this->floppy = floppy;
-				offset = index * BYTES_PER_DIR_ENTRY;
-				strncpy((char*)this->filename, filename.c_str(), 8);
-				strncpy((char*)this->extension, extension.c_str(), 3);
-				this->attributes = attributes;
-				this->reserved = reserved;
-				this->createTime = createTime;
-				this->createDate = createDate;
-				this->lastAccessDate = lastAccessDate;
-				this->ignore = ignore;
-				this->lastWriteTime = lastWriteTime;
-				this->lastWriteDate = lastWriteDate;
-				this->firstLogicalSector = firstLogicalSector;
-				this->fileSize = fileSize;
+			void setFilename(char *filename) {
+				strncpy((char*)this->filename, filename, 8);
 			}
 
 			// Required because a filename with chars in all 8 elements cannot hold a null-terminating char
-			string getFilename() const {
-				if (filename) return string((char*)filename, 8);
-				return "";
+			string getFilename() {
+				if (!filename) return "";
+				return string((char*)filename, 8);
+			}
+
+			void setExtension(char *extension) {
+				strncpy((char*)this->extension, extension, 3);
 			}
 
 			// Required because an extension with chars in all 3 elements cannot hold a null-terminating char
-			string getExtension() const {
-				if (extension) return string((char*)extension, 3);
-				return "";
+			string getExtension() {
+				if (!extension) return "";
+				return string((char*)extension, 3);
 			}
 
 			void rename(string newName){
@@ -255,7 +244,7 @@ struct Floppy {
 			}
 
 			string getLastWriteDate() const {
-				return toDate(lastWriteDate);
+//				return toDate(lastWriteDate);
 				if (!lastWriteDate) return "";
 
 				string temp = string(reinterpret_cast<char*>(lastWriteDate));	// turn into a string
@@ -305,7 +294,7 @@ struct Floppy {
 				cout << temp.getFilename() << "	" << temp.getExtension() << "	" << temp.fileSize << "	" << temp.getLastWriteDate()
 				<< "	" << temp.getLastWriteTime() << endl;
 				counter++;
-				tempBytes += temp.fileSize;
+				tempBytes += *temp.fileSize;
 				// close if, close for
 				// Then we continue to go through FAT table, ignoring reserved, bad, and unused sectors until we reach the last.
 				cout << "	" << counter << " file(s)	" << tempBytes << " bytes" << endl;
@@ -313,16 +302,12 @@ struct Floppy {
 			}
 		};
 
-		Floppy *floppy;
 		Entry entries[NUM_OF_DIR_ENTRIES];
 
-		RootDir(Floppy *floppy) : floppy(floppy) {
+		RootDir(Floppy &floppy) {
 			for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
 				entries[i].initialize(floppy, i);
-			}//	floppy.rootDir.entries[0].initialize(&floppy, 0, "IO", "SYS", 0, 0, 0, 0, 0, 0, 0x500, 0xB0B, 0, (unsigned long)13454);
-			//	floppy.rootDir.entries[1].initialize(&floppy, 0, "GETTYSBU", "TXT", 0, 0, 0, 0, 0, 0, 0xE0F, 0xB13, 0, (unsigned long)1287);
-			//	floppy.rootDir.entries[2].initialize(&floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0xF21, 0xB11, 0, (unsigned long)1193405);
-
+			}
 		}
 
 		Entry* nextFreeEntry() {
@@ -330,10 +315,11 @@ struct Floppy {
 				if (EMPTY_DIR_ENTRY == entries[i].filename[0] || LAST_DIR_ENTRY == entries[i].filename[0])  return &entries[i];
 			}
 
-			throw bad_alloc();
+			perror("There are no more directory entries available.");
+			throw exception();
 		}
 
-		// Not really needed, since struct access of members is public anyway
+		// Not really needed, since default struct access of members is public anyway
 		friend ostream& operator<<(ostream &out, const RootDir &rootDir);
 	};
 
@@ -342,7 +328,7 @@ struct Floppy {
 	FAT fat;
 	RootDir rootDir;
 
-	Floppy(void) : fat(this), rootDir(this) {
+	Floppy(void) : fat(*this), rootDir(*this) {
 		loadFloppy();
 	}
 
@@ -350,76 +336,83 @@ struct Floppy {
 	void loadFloppy() {
 		file = fopen(FLP, "rwb");
 
-		if (file) {
-			long i = 0;
-
-			while (!feof(file)) {
-				bytes[i++] = fgetc(file);
-			}
-		} else {
+		if (!file) {
 			perror("Error opening file.");
+			throw exception();
+		}
+
+		ulong i = 0;
+
+		while (!feof(file)) {
+			bytes[i++] = fgetc(file);
 		}
 	}
 
 	void copy(string filename) {
 		FILE *f = fopen(filename.c_str(), "rb");
 
-		if (f) {
-			RootDir::Entry *dirEntry;
-			struct stat fileStats;
-
-			dirEntry = rootDir.nextFreeEntry();
-
-			short dot = filename.find('.');
-
-			strncpy(reinterpret_cast<char*>(dirEntry->filename), filename.substr(0, dot).c_str(), 8);
-			strncpy(reinterpret_cast<char*>(dirEntry->extension), filename.substr(dot + 1).c_str(), 3);
-
-			stat(filename.c_str(), &fileStats);
-
-			char createTime[6], createDate[6], lastAccessDate[6], lastWriteTime[6], lastWriteDate[6];
-			time_t now;
-
-			time(&now);
-
-			strftime(createTime, 6, "%H-%M", localtime(&now));
-			strftime(createDate, 6, "%m-%d", localtime(&now));
-			strftime(lastAccessDate, 6, "%m-%d", localtime(&fileStats.st_atim.tv_sec));
-			strftime(lastWriteTime, 6, "%H-%M", localtime(&fileStats.st_mtim.tv_sec));
-			strftime(lastWriteDate, 6, "%m-%d", localtime(&fileStats.st_mtim.tv_sec));
-
-			dirEntry->createTime = fromTime(createTime);
-			dirEntry->createDate = fromDate(createDate);
-			dirEntry->lastAccessDate = fromDate(lastAccessDate);
-			dirEntry->lastWriteTime = fromTime(lastWriteTime);
-			dirEntry->lastWriteDate = fromDate(lastWriteDate);
-			dirEntry->fileSize = fileStats.st_size;
-
-			FAT::Entry *fatEntry = fat.nextFreeEntry();
-			long i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
-
-			while (!feof(f)) {
-				bytes[i++] = fgetc(f);
-
-				if (i % 512 == 0 && !feof(f)) {
-					FAT::Entry *temp = fat.nextFreeEntry();
-
-					fatEntry->next = temp->index;
-					fatEntry = temp;
-					i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
-				}
-			}
-
-			fatEntry->next = LAST_SECTOR;
-		} else {
+		if (!f) {
 			perror("Error opening file.");
+			return;
 		}
+
+		RootDir::Entry *dirEntry = rootDir.nextFreeEntry();
+		byte dot = filename.find('.');
+		struct stat fileStats;	// Stores file attributes.
+		time_t n;	// The current time.
+		struct tm *now, *access, *write;	// Time structs of file attributes.
+		char createTime[6], createDate[6], lastAccessDate[6], lastWriteTime[6], lastWriteDate[6];	// Temporary buffers.
+		FAT::Entry *fatEntry = fat.nextFreeEntry();
+		ulong i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
+
+		// Retrieve file attributes.
+		stat(filename.c_str(), &fileStats);
+
+		// Convert times into a usable format.
+		now = localtime(&n);
+		access = localtime(&fileStats.st_atim.tv_sec);
+		write = localtime(&fileStats.st_mtim.tv_sec);
+
+		// Format the time into a string that can be used to convert into the attributes of a directory entry.
+		strftime(createTime, 6, "%H-%M", now);
+		strftime(createDate, 6, "%m-%d", now);
+		strftime(lastAccessDate, 6, "%m-%d", access);
+		strftime(lastWriteTime, 6, "%H-%M", write);
+		strftime(lastWriteDate, 6, "%m-%d", write);
+
+		// Copy possibly non-null-terminated chars.
+		strncpy((char*)dirEntry->filename, filename.substr(0, dot).c_str(), 8);
+		strncpy((char*)dirEntry->extension, filename.substr(dot + 1).c_str(), 3);
+
+		// Copy dates and times into Floppy.
+		*dirEntry->createTime = fromTime(createTime);
+		*dirEntry->createDate = fromDate(createDate);
+		*dirEntry->lastAccessDate = fromDate(lastAccessDate);
+		*dirEntry->lastWriteTime = fromTime(lastWriteTime);
+		*dirEntry->lastWriteDate = fromDate(lastWriteDate);
+
+		*dirEntry->fileSize = fileStats.st_size;
+
+		while (!feof(f)) {
+			bytes[i++] = fgetc(f);
+
+			if (i % 512 == 0 && !feof(f)) {
+				FAT::Entry *temp = fat.nextFreeEntry();
+
+				*fatEntry = temp->index;	// Overloaded assignment operator:  sets the 12-bit value of a fat entry.
+				fatEntry = temp;
+				i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
+			}
+		}
+
+		*fatEntry = LAST_SECTOR;	// Overloaded assignment operator:  sets the 12-bit value of a fat entry.
 	}
 };
 
 ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 	byte numOfFiles = 0;
-	long bytesUsed = 0;
+	ulong bytesUsed = 0;
+	ulong bytesWasted = 0;
 
 	puts("Volume Serial Number is 0859-1A04\n");
 	puts("Directory of C:\\\n\n");
@@ -430,19 +423,20 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 		if (LAST_DIR_ENTRY == entry.filename[0]) break;
 		if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
 
-		printf("%-8s %-3s   %7lu %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), entry.fileSize, toDate(entry.lastWriteDate).c_str(), toTime(entry.lastWriteTime).c_str());
+		printf("%-8s %-3s   %7u %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), *entry.fileSize, toDate(*entry.lastWriteDate).c_str(), toTime(*entry.lastWriteTime).c_str());
 
-		numOfFiles++;
-		bytesUsed += entry.fileSize;
+		++numOfFiles;
+		bytesUsed += *entry.fileSize;
+		bytesWasted += 512 - (*entry.fileSize % 512);
 	}
 
 	printf("      %3i file%3s    %7lu bytes\n", numOfFiles, (numOfFiles != 1 ? "(s)" : ""), bytesUsed);
-	printf("                     %7lu bytes free\n", 1474560 - bytesUsed);	// TODO Must take into account internal fragmentation.
+	printf("                     %7lu bytes free\n", 1474560 - bytesUsed- bytesWasted);	// TODO Must take into account internal fragmentation.
 
 	return out;
 }
 
-string toDate(unsigned short data) {
+string toDate(ushort data) {
 	byte month = data >> 8;
 	byte day = data & 0xFF;
 
@@ -455,7 +449,7 @@ string toDate(unsigned short data) {
 	return string(temp);
 }
 
-unsigned short fromDate(string date) {
+ushort fromDate(string date) {
 	byte month = atoi(date.substr(0, 2).c_str());
 	byte day = atoi(date.substr(3, 2).c_str());
 
@@ -486,7 +480,7 @@ byte maxDays(byte month) {
 	}
 }
 
-string toTime(unsigned short data) {
+string toTime(ushort data) {
 	byte hour = data >> 8;
 	byte minute = data & 0xFF;
 
@@ -504,7 +498,7 @@ string toTime(unsigned short data) {
 	return string(temp);
 }
 
-unsigned short fromTime(string date) {
+ushort fromTime(string date) {
 	byte hour = atoi(date.substr(0, 2).c_str());
 	byte minute = atoi(date.substr(3, 2).c_str());
 
