@@ -46,7 +46,7 @@ using namespace std;
 
 string toDate(ushort data);
 ushort fromDate(string date);
-void checkDate(byte month, byte day);
+void checkDate(byte month, byte day, byte year);
 byte maxDays(byte month);
 string toTime(ushort time);
 ushort fromTime(string time);
@@ -460,14 +460,15 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 }
 
 string toDate(ushort data) {
-	byte month = data >> 8;
-	byte day = data & 0xFF;
+	byte day = data >> 11;
+	byte month = (data >> 7) & 0xF;
+	byte year = data & 0x7F;
 
-	checkDate(month, day);
+	checkDate(month, day, year);
 
 	char temp[9];
 
-	sprintf(temp, "%2i-%02i-13", month, day);
+	sprintf(temp, "%2i-%02i-%04i", month, day, 1980 + year);
 
 	return string(temp);
 }
@@ -475,15 +476,17 @@ string toDate(ushort data) {
 ushort fromDate(string date) {
 	byte month = atoi(date.substr(0, 2).c_str());
 	byte day = atoi(date.substr(3, 2).c_str());
+	byte year = atoi(date.substr(6, 4).c_str());
 
-	checkDate(month, day);
+	checkDate(month, day, year);
 
-	return (month << 8) + day;
+	return (day << 11) + (month << 5) + (year - 1980);
 }
 
-void checkDate(byte month, byte day) {
+void checkDate(byte month, byte day, byte year) {
 	if (month < 1 || month > 12) throw out_of_range("Month is out of range.");
 	if (day < 1 || day > maxDays(month)) throw out_of_range("Day is out of range.");
+	if (year > 127) throw out_of_range("Year is out of range.");
 }
 
 byte maxDays(byte month) {
