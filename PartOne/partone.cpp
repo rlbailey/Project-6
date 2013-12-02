@@ -64,6 +64,8 @@ byte maxDays(byte month);
 string toTime(unsigned short time);
 unsigned short fromTime(string time);
 void checkTime(byte hour, byte minute);
+byte numOfFiles;
+long bytesUsed;
 
 struct Sector {
 	// # bytes? 512
@@ -418,8 +420,8 @@ struct Floppy {
 };
 
 ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
-	byte numOfFiles = 0;
-	long bytesUsed = 0;
+	/*byte*/ numOfFiles = 0;//Declared these as global variables so they can be called by other dumps
+	/*long*/ bytesUsed = 0;
 
 	puts("Volume Serial Number is 0859-1A04\n");
 	puts("Directory of C:\\\n\n");
@@ -518,3 +520,64 @@ void checkTime(byte hour, byte minute) {
 	if (minute < 0 || minute > 59) throw out_of_range("Minute is out of range.");
 }
 
+ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir, bool directorydump) {//could probably use a bool & check it and put this in the other operator out
+	puts("ROOT DIRECTORY:\n");
+	puts("|-----FILENAME-----|-EXTN-|AT|RESV|CRTM|CDRT|LADT|IGNR|LWTM|LWDT|FRST|--SIZE--|\n");
+
+	for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
+		Floppy::RootDir::Entry entry = rootDir.entries[i];
+
+		if (LAST_DIR_ENTRY == entry.filename[0]) break;
+		if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
+
+		printf("%-8s %-3s   %7lu %8s   %6s\n", "%X", entry.getFilename(), entry.getExtension(), entry.attributes, entry.reserved, toTime(entry.createTime), toDate(entry.createDate), toDate(entry.lastAccessDate), entry.ignore, toTime(entry.lastWriteTime), toDate(entry.lastWriteDate), entry.firstLogicalSector, entry.fileSize);
+		
+	}
+
+	return out;
+}
+
+void usageMap(){//not sure what arguments it should take in
+	double percUsed = (bytesUsed/1474560);
+	cout<<"CAPACITY:	1,474,560b	USED:	" << bytesUsed << " ("<<percUsed<<"%)	FREE:	" << (1474560-bytesUsed) << "	(" << ((1474560-bytesUsed)/1474560) <<"%)"<<endl;
+	cout<<"SECTORS:		2,880		USED:	" <<endl;//Need to keep track of #sectors in use. Probably need to interate through the everything
+	cout<<"FILES:	46	SECOTRS/FILE:	" << endl;//Also keep track of the largest & smallest files
+	cout<<"\nDISK USAGE BY SECTOR:"<<endl;
+	cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
+	cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
+	cout<<"0080-0159"<<endl;
+	cout<<"0160-0239"<<endl;
+	cout<<"0240-0319"<<endl;
+	cout<<"0320-0399"<<endl;
+	cout<<"0400-0479"<<endl;
+	cout<<"0480-0559"<<endl;
+	cout<<"0560-0639"<<endl;
+	cout<<"0640-0719"<<endl;
+	cout<<"0720-0799"<<endl;
+	cout<<"0800-0879"<<endl;
+	cout<<"0880-0959"<<endl;
+	cout<<"0960-1039"<<endl;
+	cout<<"1040-1179"<<endl;
+	cout<<"1120-1259"<<endl;
+	cout<<"1200-1339"<<endl;
+	cout<<"1280-1419"<<endl;
+	cout<<"1360-1499"<<endl;
+	cout<<"1440-1519"<<endl;
+	cout<<"1520-1599"<<endl;
+	cout<<"1600-1679"<<endl;
+	cout<<"1680-1759"<<endl;
+	cout<<"1760-1839"<<endl;
+	cout<<"1840-1919"<<endl;
+	cout<<"1920-1999"<<endl;
+	cout<<"2000-2079"<<endl;
+	cout<<"2080-2159"<<endl;
+	cout<<"2160-2239"<<endl;
+	cout<<"2240-2319"<<endl;//THIS IS THE WORST THING IN THE WORLD
+	cout<<"2320-2399"<<endl;
+	cout<<"2400-2479"<<endl;
+	cout<<"2480-2559"<<endl;
+	cout<<"2560-2639"<<endl;
+	cout<<"2640-2719"<<endl;
+	cout<<"2720-2799"<<endl;
+	cout<<"2800-2879"<<endl;//FINALLY
+}
