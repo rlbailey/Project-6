@@ -33,6 +33,49 @@ int main(void) {
 	floppy.copy("WHALE.TXT");
 
 	cout << floppy.rootDir;
+	
+	bool menu=true;
+	int selection;
+	while(menu !=false){
+		cout<<"MENU:"<<endl;
+		cout<<"1) List Directory"<<endl;
+		cout<<"2) Copy File to disk"<<endl;
+		cout<<"3) Delete a File"<<endl;
+		cout<<"4) Rename a File"<<endl;
+		cout<<"5) Usage map"<<endl;
+		cout<<"6) Directory dump"<<endl;
+		cout<<"7) FAT dump"<<endl:
+		cout<<"8) FAT chain"<<endl;
+		cout<<"9) Sector Dump"<<endl;
+		cout<<"10) Exit"<<endl;
+		
+		cin>>selection;
+		
+		swith(selection){
+			case 1://Call listdirectory
+				break;
+			case 2://call copy
+				break;
+			case 3://call remove
+				break;
+			case 4://call rename
+				break;
+			case 5://call usage map
+				break;
+			case 6://call directory dump
+				break;
+			case 7://call fat dump
+				break;
+			case 8://call fat chain
+				break;
+			case 9://call sector dump
+				break;
+			case 10:
+				cout<<"Bye"<<endl;
+				menu=false;
+				break;
+		}
+	}
 
 	return 0;
 }
