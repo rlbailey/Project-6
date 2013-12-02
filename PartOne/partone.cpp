@@ -277,29 +277,6 @@ struct Floppy {
 
 				return temp2;
 			}
-
-			// Setting up basic print skeletons, mostly just messing with things to get a grip on it
-			void listDirectory() {
-				int counter = 0;	// counter will increment every time we post a file name
-				int tempBytes = 0;
-				cout << "Volume Serial Number is " << /* check how to generate this. */ endl;
-				cout << "Directory of C:\\ " <<endl;//should be the same regardless
-
-				// this next bit lists the file name, extension, file size, last date accessed, last time accessed for each file
-				// should need to ... step through FAT1, get physical location of file in directory, then grab the file info and print it as:
-				// fat[i] tells us where to go.  Now go to that location.  I'll call it temp for now
-				// for(int i = 0; i < MaxFAT1Size; i++)
-				// if (fat[i] != 0x00 || 0xFF0 || 0xFF1 ...... || 0xFF6 || 0xFF7) has to be an easier cleaner way to do this check
-				Floppy::RootDir::Entry temp;
-				cout << temp.getFilename() << "	" << temp.getExtension() << "	" << temp.fileSize << "	" << temp.getLastWriteDate()
-				<< "	" << temp.getLastWriteTime() << endl;
-				counter++;
-				tempBytes += *temp.fileSize;
-				// close if, close for
-				// Then we continue to go through FAT table, ignoring reserved, bad, and unused sectors until we reach the last.
-				cout << "	" << counter << " file(s)	" << tempBytes << " bytes" << endl;
-				cout << "			" << " bytes free" << endl;	// to calculate bytes free, keep track of unused sectors?
-			}
 		};
 
 		Entry entries[NUM_OF_DIR_ENTRIES];
@@ -317,6 +294,52 @@ struct Floppy {
 
 			perror("There are no more directory entries available.");
 			throw exception();
+		}
+
+		// Setting up basic print skeletons, mostly just messing with things to get a grip on it
+		void listDirectory() {
+			byte numOfFiles = 0;
+			ulong bytesUsed = 0;
+			ulong bytesWasted = 0;
+
+			puts("Volume Serial Number is 0859-1A04\n");
+			puts("Directory of C:\\\n\n");
+
+			for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
+				Entry entry = entries[i];
+
+				if (LAST_DIR_ENTRY == entry.filename[0]) break;
+				if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
+
+				printf("%-8s %-3s   %7u %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), *entry.fileSize, toDate(*entry.lastWriteDate).c_str(), toTime(*entry.lastWriteTime).c_str());
+
+				++numOfFiles;
+				bytesUsed += *entry.fileSize;
+				bytesWasted += 512 - (*entry.fileSize % 512);
+			}
+
+			printf("      %3i file%3s    %7lu bytes\n", numOfFiles, (numOfFiles != 1 ? "(s)" : ""), bytesUsed);
+			printf("                     %7lu bytes free\n", 1474560 - bytesUsed- bytesWasted);	// TODO Must take into account internal fragmentation.
+
+//				int counter = 0;	// counter will increment every time we post a file name
+//				int tempBytes = 0;
+//				cout << "Volume Serial Number is " << /* check how to generate this. */ endl;
+//				cout << "Directory of C:\\ " <<endl;//should be the same regardless
+//
+//				// this next bit lists the file name, extension, file size, last date accessed, last time accessed for each file
+//				// should need to ... step through FAT1, get physical location of file in directory, then grab the file info and print it as:
+//				// fat[i] tells us where to go.  Now go to that location.  I'll call it temp for now
+//				// for(int i = 0; i < MaxFAT1Size; i++)
+//				// if (fat[i] != 0x00 || 0xFF0 || 0xFF1 ...... || 0xFF6 || 0xFF7) has to be an easier cleaner way to do this check
+//				Floppy::RootDir::Entry temp;
+//				cout << temp.getFilename() << "	" << temp.getExtension() << "	" << temp.fileSize << "	" << temp.getLastWriteDate()
+//				<< "	" << temp.getLastWriteTime() << endl;
+//				counter++;
+//				tempBytes += *temp.fileSize;
+//				// close if, close for
+//				// Then we continue to go through FAT table, ignoring reserved, bad, and unused sectors until we reach the last.
+//				cout << "	" << counter << " file(s)	" << tempBytes << " bytes" << endl;
+//				cout << "			" << " bytes free" << endl;	// to calculate bytes free, keep track of unused sectors?
 		}
 
 		// Not really needed, since default struct access of members is public anyway
