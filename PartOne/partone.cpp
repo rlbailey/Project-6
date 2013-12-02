@@ -551,16 +551,31 @@ void usageMap(){//not sure what arguments it should take in
 	cout<<"0480-0559"<<endl;
 	cout<<"0560-0639"<<endl;
 	cout<<"0640-0719"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0560-0639"<<endl;
+	cout<<"0720-0799"<<endl;
+	cout<<"0800-0879"<<endl;
+	cout<<"0880-0959"<<endl;
+	cout<<"0960-1039"<<endl;
+	cout<<"1040-1179"<<endl;
+	cout<<"1120-1259"<<endl;
+	cout<<"1200-1339"<<endl;
+	cout<<"1280-1419"<<endl;
+	cout<<"1360-1499"<<endl;
+	cout<<"1440-1519"<<endl;
+	cout<<"1520-1599"<<endl;
+	cout<<"1600-1679"<<endl;
+	cout<<"1680-1759"<<endl;
+	cout<<"1760-1839"<<endl;
+	cout<<"1840-1919"<<endl;
+	cout<<"1920-1999"<<endl;
+	cout<<"2000-2079"<<endl;
+	cout<<"2080-2159"<<endl;
+	cout<<"2160-2239"<<endl;
+	cout<<"2240-2319"<<endl;//THIS IS THE WORST THING IN THE WORLD
+	cout<<"2320-2399"<<endl;
+	cout<<"2400-2479"<<endl;
+	cout<<"2480-2559"<<endl;
+	cout<<"2560-2639"<<endl;
+	cout<<"2640-2719"<<endl;
+	cout<<"2720-2799"<<endl;
+	cout<<"2800-2879"<<endl;//FINALLY
 }
