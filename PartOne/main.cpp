@@ -17,8 +17,12 @@
 //Implement print methods for FAT, Directory, Sectorand Disk Usage
 //A Main method that will call all of these?
 
+Floppy *f;
+
 int main(void) {
 	Floppy floppy;
+
+	f = &floppy;
 
 //	floppy.copy("CONSTITU.TXT");
 //	floppy.copy("DECLARAT.TXT");
