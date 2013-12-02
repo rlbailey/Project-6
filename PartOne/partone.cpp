@@ -110,10 +110,11 @@ struct Floppy {
 			 */
 			Entry& operator=(const ushort &value) {
 				if (!fat1Sector || !fat2Sector) {
-					string s = "FAT entry " + index;
+					char s[40];
 
-					s += " was not initialized";
-					perror(s.c_str());
+					sprintf(s, "FAT entry %i was not initialized", index);
+
+					perror(s);
 					throw exception();
 				}
 
@@ -396,11 +397,10 @@ struct Floppy {
 		struct tm *now, *access, *write;	// Time structs of file attributes.
 		char createTime[11], createDate[11], lastAccessDate[11], lastWriteTime[11], lastWriteDate[11];	// Temporary buffers.
 		FAT::Entry *fatEntry = fat.nextFreeEntry();
-		ushort sector = FAT_SECTOR_BASE + fatEntry->index;
-		ulong i = 512 * sector;
+		ulong i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
 
 		*fatEntry = RESERVED_SECTOR;
-		*dirEntry->firstLogicalSector = sector;
+		*dirEntry->firstLogicalSector = fatEntry->index;
 
 		// Retrieve file attributes.
 		stat(filename.c_str(), &fileStats);
@@ -452,6 +452,21 @@ struct Floppy {
 		}
 
 		*fatEntry = LAST_SECTOR;	// Overloaded assignment operator:  sets the 12-bit value of a fat entry.
+	}
+
+	void remove(string filename) {
+		for (ushort i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
+			char c[13];
+
+			strncat(c, (char*)rootDir.entries[i].filename, 8);
+			strcat(c, ".");
+			strncat(c, (char*)rootDir.entries[i].extension, 3);
+
+			if (strcmp(filename.c_str(), c)) {
+				rootDir.entries[i].firstLogicalSector = UNUSED_SECTOR;
+				break;
+			}
+		}
 	}
 };
 
