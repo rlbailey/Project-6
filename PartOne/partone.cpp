@@ -59,24 +59,7 @@ struct Sector {
 	// basically an array? Array of 512 bytes?
 };
 
-//struct Floppy {
-//	// likely not all these sectors
-//	Sector bootSector[0];
-//	Sector FAT1[9];
-//	Sector FAT2[9];
-//	Sector rootDir[14];
-//	Sector dataArea[2847];
-//
-//	// create one giant Sector array?
-//
-//	// initializing?
-//	//likely wont use ints
-//	Floppy(int a, int b) {
-//		// a = ?
-//		// b = ?
-//		// create the 160 tracks which create the sectors
-//	}
-//};
+
 
 struct Track {
 	// make 18 sectors
@@ -331,26 +314,6 @@ struct Floppy {
 
 			printf("      %3i file%3s    %7lu bytes\n", numOfFiles, (numOfFiles != 1 ? "(s)" : ""), bytesUsed);
 			printf("                     %7lu bytes free\n", 1474560 - bytesUsed- bytesWasted);	// TODO Must take into account internal fragmentation.
-
-//				int counter = 0;	// counter will increment every time we post a file name
-//				int tempBytes = 0;
-//				cout << "Volume Serial Number is " << /* check how to generate this. */ endl;
-//				cout << "Directory of C:\\ " <<endl;//should be the same regardless
-//
-//				// this next bit lists the file name, extension, file size, last date accessed, last time accessed for each file
-//				// should need to ... step through FAT1, get physical location of file in directory, then grab the file info and print it as:
-//				// fat[i] tells us where to go.  Now go to that location.  I'll call it temp for now
-//				// for(int i = 0; i < MaxFAT1Size; i++)
-//				// if (fat[i] != 0x00 || 0xFF0 || 0xFF1 ...... || 0xFF6 || 0xFF7) has to be an easier cleaner way to do this check
-//				Floppy::RootDir::Entry temp;
-//				cout << temp.getFilename() << "	" << temp.getExtension() << "	" << temp.fileSize << "	" << temp.getLastWriteDate()
-//				<< "	" << temp.getLastWriteTime() << endl;
-//				counter++;
-//				tempBytes += *temp.fileSize;
-//				// close if, close for
-//				// Then we continue to go through FAT table, ignoring reserved, bad, and unused sectors until we reach the last.
-//				cout << "	" << counter << " file(s)	" << tempBytes << " bytes" << endl;
-//				cout << "			" << " bytes free" << endl;	// to calculate bytes free, keep track of unused sectors?
 		}
 
 		// Not really needed, since default struct access of members is public anyway
@@ -584,6 +547,26 @@ void checkTime(byte hour, byte minute, byte second, char suffix) {
 	if ('a' != suffix && 'p' != suffix) throw invalid_argument("Incorrect time modifier (i.e., am or pm).");
 }
 
+ulong getBytesUsed(const Floppy::RootDir &rootDir){
+	bytesUsed =0;
+	numOfFiles=0;//0 them out just incase there's a scenario where one was altered but another wasn't
+	for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
+		Floppy::RootDir::Entry entry = rootDir.entries[i];
+
+		if (LAST_DIR_ENTRY == entry.filename[0]) break;
+		if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
+		
+		bytesUsed+= *entry.fileSize;
+		numOfFiles++;
+
+	}
+	return bytesUsed;
+}
+
+int getSectorsUsed(){
+	return bytesUsed*512;
+}
+
 ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directorydump*/) {//could probably use a bool & check it and put this in the other operator out
 	puts("ROOT DIRECTORY:\n");
 	puts("|-----FILENAME-----|-EXTN-|AT|RESV|CRTM|CDRT|LADT|IGNR|LWTM|LWDT|FRST|--SIZE--|\n");
@@ -605,7 +588,7 @@ void usageMap(){//not sure what arguments it should take in
 	double percUsed = (bytesUsed/1474560);
 	cout<<"CAPACITY:	1,474,560b	USED:	" << bytesUsed << " ("<<percUsed<<"%)	FREE:	" << (1474560-bytesUsed) << "	(" << ((1474560-bytesUsed)/1474560) <<"%)"<<endl;
 	cout<<"SECTORS:		2,880		USED:	" <<endl;//Need to keep track of #sectors in use. Probably need to interate through the everything
-	cout<<"FILES:	46	SECOTRS/FILE:	" << endl;//Also keep track of the largest & smallest files
+	cout<<"FILES:	"<<numOfFiles<<"	SECOTRS/FILE:	" << endl;//Also keep track of the largest & smallest files
 	cout<<"\nDISK USAGE BY SECTOR:"<<endl;
 	cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
 	cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
