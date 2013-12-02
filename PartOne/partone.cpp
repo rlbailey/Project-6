@@ -146,12 +146,20 @@ struct Floppy {
 			 * This value "points" to the next FAT entry.
 			 * Bit packing applies
 			 */
-			ushort operator*(void) const {
+			ushort operator*(void) {
 				if (index % 2) {
 					return (fat1Sector[0] << 4) + (fat1Sector[1] >> 4);
 				} else {
 					return (fat1Sector[0] & 0xF << 8) + fat1Sector[1];
 				}
+			}
+
+			bool operator==(ushort value) {
+				return (value == **this);
+			}
+
+			bool operator!=(ushort value) {
+				return (value != **this);
 			}
 		};
 
@@ -245,7 +253,7 @@ struct Floppy {
 				}
 			}
 
-			string getLastWriteDate() const {
+			string getLastWriteDate() {
 //				return toDate(lastWriteDate);
 				if (!lastWriteDate) return "";
 
@@ -262,7 +270,7 @@ struct Floppy {
 				return temp2;
 			}
 
-			string getLastWriteTime() const {
+			string getLastWriteTime() {
 				if (!lastWriteTime) return "";
 
 				string temp = string(reinterpret_cast<char*>(lastWriteTime));	// turn into a string
@@ -388,7 +396,11 @@ struct Floppy {
 		struct tm *now, *access, *write;	// Time structs of file attributes.
 		char createTime[11], createDate[11], lastAccessDate[11], lastWriteTime[11], lastWriteDate[11];	// Temporary buffers.
 		FAT::Entry *fatEntry = fat.nextFreeEntry();
-		ulong i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
+		ushort sector = FAT_SECTOR_BASE + fatEntry->index;
+		ulong i = 512 * sector;
+
+		*fatEntry = RESERVED_SECTOR;
+		*dirEntry->firstLogicalSector = sector;
 
 		// Retrieve file attributes.
 		stat(filename.c_str(), &fileStats);
@@ -422,12 +434,21 @@ struct Floppy {
 			bytes[i++] = fgetc(f);
 
 			if (i % 512 == 0 && !feof(f)) {
-				FAT::Entry *temp = fat.nextFreeEntry();
+				if (*fatEntry == UNUSED_SECTOR || *fatEntry == LAST_SECTOR) {
+					FAT::Entry *temp = fat.nextFreeEntry();
 
-				*fatEntry = temp->index;	// Overloaded assignment operator:  sets the 12-bit value of a fat entry.
-				fatEntry = temp;
-				i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
+					*temp = RESERVED_SECTOR;
+					*fatEntry = temp->index;	// Overloaded assignment operator:  sets the 12-bit value of a fat entry.
+					fatEntry = temp;
+					i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
+				} else {
+					fatEntry = &fat.entries[fatEntry->index];
+				}
 			}
+		}
+
+		if (*fatEntry != UNUSED_SECTOR && *fatEntry != RESERVED_SECTOR && *fatEntry != BAD_SECTOR && *fatEntry != LAST_SECTOR) {
+			fat.entries[**fatEntry] = UNUSED_SECTOR;
 		}
 
 		*fatEntry = LAST_SECTOR;	// Overloaded assignment operator:  sets the 12-bit value of a fat entry.
