@@ -558,6 +558,37 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 
 	return out;
 }
+//helper method for Usage Map
+string printUsageSectors(int rangeStart, int rangeEnd){
+	string result;
+	int counter = 1;//to keep track of how many bytes
+	bool used = false;//to see if the sector was used
+	rangeStart *=512;//convert sectors to bytes
+	rangeEnd *= 512;//again
+for(int i = rangeStart; i < rangeEnd; i++){//now iterate through the bytes
+		counter++;
+		if(bytes[i]!= NULL && used==false){
+			used=true;
+		}
+		if(counter==512 && used==true){
+			counter=1;
+			used = false;
+			if(i>16384)//data section, check this first so we don’t do 3 useless checks every single time
+				result.push_back('X');
+			else if(i==511)//first 512 bytes means this is the Boot Sector
+				result.push_back('B');
+			else if(i>511 && i<9216)//this range are the FAT tables
+				result.push_back('F');
+			else if(i>=9216 && i<16384)//The root directory
+				result.pushback('R');
+		}
+		else if(counter==512 && used==false){//unused sector
+			result.push_back('.');
+		}
+		
+	}
+	
+}
 
 void usageMap(){//not sure what arguments it should take in
 	int starter = 0;
@@ -572,7 +603,7 @@ void usageMap(){//not sure what arguments it should take in
 	cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
 	cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
 	for(int i = 0; i<35;i++){
-		printf("%04D", starter, "-", ender/*, the sector printing*/);
+		printf("%04D", starter, "-", ender,": ", printUsageSectors(starter,ender),"\n");
 		starter +=80;
 		ender+=80;
 	}
@@ -615,8 +646,6 @@ void dumpSector(int phySec){
 	int starter = 0;
 	//We print out, in hex, the 512 bytes of the specified sector.
 	//But also, the string value of it
-
-	
 	for(int i =0; i< 25; i++){
 		if(starter != 500)
 			printf("%03D", starter,": "/*print the first 20 bytes of sector physsec, print the actual stored string*/);
