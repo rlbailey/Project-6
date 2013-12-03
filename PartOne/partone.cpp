@@ -570,6 +570,8 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 }
 
 void usageMap(){//not sure what arguments it should take in
+	int starter = 0;
+	int ender = 0;
 	double percUsed = (bytesUsed/1474560);
 	int sectors = getSectorsUsed();
 	double secPerc = (sectors/2880);
@@ -579,57 +581,25 @@ void usageMap(){//not sure what arguments it should take in
 	cout<<"\nDISK USAGE BY SECTOR:"<<endl;
 	cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
 	cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
-	cout<<"0080-0159"<<endl;
-	cout<<"0160-0239"<<endl;
-	cout<<"0240-0319"<<endl;
-	cout<<"0320-0399"<<endl;
-	cout<<"0400-0479"<<endl;
-	cout<<"0480-0559"<<endl;
-	cout<<"0560-0639"<<endl;
-	cout<<"0640-0719"<<endl;
-	cout<<"0720-0799"<<endl;
-	cout<<"0800-0879"<<endl;
-	cout<<"0880-0959"<<endl;
-	cout<<"0960-1039"<<endl;
-	cout<<"1040-1179"<<endl;
-	cout<<"1120-1259"<<endl;
-	cout<<"1200-1339"<<endl;
-	cout<<"1280-1419"<<endl;
-	cout<<"1360-1499"<<endl;
-	cout<<"1440-1519"<<endl;
-	cout<<"1520-1599"<<endl;
-	cout<<"1600-1679"<<endl;
-	cout<<"1680-1759"<<endl;
-	cout<<"1760-1839"<<endl;
-	cout<<"1840-1919"<<endl;
-	cout<<"1920-1999"<<endl;
-	cout<<"2000-2079"<<endl;
-	cout<<"2080-2159"<<endl;
-	cout<<"2160-2239"<<endl;
-	cout<<"2240-2319"<<endl;//THIS IS THE WORST THING IN THE WORLD
-	cout<<"2320-2399"<<endl;
-	cout<<"2400-2479"<<endl;
-	cout<<"2480-2559"<<endl;
-	cout<<"2560-2639"<<endl;
-	cout<<"2640-2719"<<endl;
-	cout<<"2720-2799"<<endl;
-	cout<<"2800-2879"<<endl;//FINALLY
+	for(int i = 0; i<35;i++){
+		printf("%04D", starter, "-", ender/*, the sector printing*/)
+		starter +=20;
+		ender+=20;
+	}
 }
 
 void dumpFAT(){
+	int starter = 0;
+	int ender = 19;
 	//print out the entire FAT table in HEX
 	//will probably require a helper method? Pass in a range of values?
 	//ie: printThese(0, 19) which will return (in hex) a string or an output the first 19 entires of the FAT
 	//then in the second row we'd pass in printThese(20,39) which returns hex string of those entries?
-	cout<<"0000-0019"<<endl;
-	cout<<"0020-0039"<<endl;
-	cout<<"0040-0059"<<endl;
-	cout<<"0060-0079"<<endl;
-	cout<<"0080-0099"<<endl;
-	cout<<"0100-0119"<<endl;
-	cout<<"0120-0139"<<endl;
-	//etc
-	//the example goes to 2879
+	for(int i=0; i< 144; i++){
+		printf("%04D", starter, "-", ender/*,printThese(starter,ender)*/);
+		starter +=20;
+		ender+=20;
+	}
 }
 
 bool checkFATS(){//when we dump fat it also wants a check for if the 2 fat tables are the same
@@ -643,10 +613,16 @@ void fatChain(){
 }
 
 void dumpSector(int phySec){
+	int starter = 0;
 	//We print out, in hex, the 512 bytes of the specified sector.
 	//But also, the string value of it
-	//ie:
-	cout << "000" <</*first 20 bytes << the string version of those bytes*/endl;
-	//now do the next 20 bytes again and again until
-	cout <<"500";/*<<Last 12 bytes << string version*/
+
+	
+	for(int i =0; i< 25; i++){
+		if(starter != 500)
+			printf("%03D", starter,": "/*print the first 20 bytes of sector physsec, print the actual stored string*/);
+		else
+			printf("%03D", starter,": "/*print the last 12 bytes, print its stored string*/);
+		starter+=20;
+	}
 }
