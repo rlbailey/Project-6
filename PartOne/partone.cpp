@@ -586,9 +586,11 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 
 void usageMap(){//not sure what arguments it should take in
 	double percUsed = (bytesUsed/1474560);
+	int sectors = getSectorsUsed();
+	double secPerc = (sectors/2880); 
 	cout<<"CAPACITY:	1,474,560b	USED:	" << bytesUsed << " ("<<percUsed<<"%)	FREE:	" << (1474560-bytesUsed) << "	(" << ((1474560-bytesUsed)/1474560) <<"%)"<<endl;
-	cout<<"SECTORS:		2,880		USED:	" <<endl;//Need to keep track of #sectors in use. Probably need to interate through the everything
-	cout<<"FILES:	"<<numOfFiles<<"	SECOTRS/FILE:	" << endl;//Also keep track of the largest & smallest files
+	cout<<"SECTORS:		2,880		USED:	" << sectors << "(" << secPerc << "%)	FREE:	" << (2880 - sectors) << "("<<((2880-sectors)/2880) <<"%)"endl;
+	cout<<"FILES:	"<<numOfFiles<<"	SECOTRS/FILE:	" << (sectors/numOfFiles) << "	LARGEST:	" << endl;//Also keep track of the largest & smallest files
 	cout<<"\nDISK USAGE BY SECTOR:"<<endl;
 	cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
 	cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
