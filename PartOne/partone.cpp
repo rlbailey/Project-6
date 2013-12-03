@@ -54,34 +54,6 @@ void checkTime(byte hour, byte minute, byte second, char suffix);
 byte numOfFiles;
 ulong bytesUsed;
 
-struct Sector {
-	// # bytes? 512
-	// basically an array? Array of 512 bytes?
-};
-
-//struct Floppy {
-//	// likely not all these sectors
-//	Sector bootSector[0];
-//	Sector FAT1[9];
-//	Sector FAT2[9];
-//	Sector rootDir[14];
-//	Sector dataArea[2847];
-//
-//	// create one giant Sector array?
-//
-//	// initializing?
-//	//likely wont use ints
-//	Floppy(int a, int b) {
-//		// a = ?
-//		// b = ?
-//		// create the 160 tracks which create the sectors
-//	}
-//};
-
-struct Track {
-	// make 18 sectors
-	// array of sectors .. ?
-};
 
 // Simulate a floppy disk
 struct Floppy {
@@ -185,11 +157,6 @@ struct Floppy {
 			throw exception();
 		}
 
-		// so how do we take this from bytes to bits
-		// also, do we need a second version of this since when we look at the next entry's portion1 to grab half of it ...
-		// ... then its portion 3 is fine?
-		// consider counting 1 entry as 2?
-		// unsigned char portion4 through 6, and then 3 and 4 just "share" somehow?
 	};
 
 	struct RootDir {
@@ -244,14 +211,17 @@ struct Floppy {
 				return string((char*)extension, 3);
 			}
 
-			void rename(string newName){
+			void rename(string oldName, string newName){
 				int temp = newName.size();
 				if(temp > 8){
 					temp = (temp - (temp-8));
 				}
-				for(int i = 0; i<temp; i++){
-					filename[i]=newName[i];
+				if(getFilename() == oldName){
+					for(int i = 0; i<temp; i++){
+						filename[i]=newName[i];
+					}
 				}
+				
 			}
 
 			string getLastWriteDate() {
@@ -309,8 +279,8 @@ struct Floppy {
 
 		// Setting up basic print skeletons, mostly just messing with things to get a grip on it
 		void listDirectory() {
-			/*byte*/ numOfFiles = 0;
-			/*ulong*/ bytesUsed = 0;
+			numOfFiles = 0;
+			bytesUsed = 0;
 			ulong bytesWasted = 0;
 
 			puts("Volume Serial Number is 0859-1A04\n");
@@ -331,26 +301,6 @@ struct Floppy {
 
 			printf("      %3i file%3s    %7lu bytes\n", numOfFiles, (numOfFiles != 1 ? "(s)" : ""), bytesUsed);
 			printf("                     %7lu bytes free\n", 1474560 - bytesUsed- bytesWasted);	// TODO Must take into account internal fragmentation.
-
-//				int counter = 0;	// counter will increment every time we post a file name
-//				int tempBytes = 0;
-//				cout << "Volume Serial Number is " << /* check how to generate this. */ endl;
-//				cout << "Directory of C:\\ " <<endl;//should be the same regardless
-//
-//				// this next bit lists the file name, extension, file size, last date accessed, last time accessed for each file
-//				// should need to ... step through FAT1, get physical location of file in directory, then grab the file info and print it as:
-//				// fat[i] tells us where to go.  Now go to that location.  I'll call it temp for now
-//				// for(int i = 0; i < MaxFAT1Size; i++)
-//				// if (fat[i] != 0x00 || 0xFF0 || 0xFF1 ...... || 0xFF6 || 0xFF7) has to be an easier cleaner way to do this check
-//				Floppy::RootDir::Entry temp;
-//				cout << temp.getFilename() << "	" << temp.getExtension() << "	" << temp.fileSize << "	" << temp.getLastWriteDate()
-//				<< "	" << temp.getLastWriteTime() << endl;
-//				counter++;
-//				tempBytes += *temp.fileSize;
-//				// close if, close for
-//				// Then we continue to go through FAT table, ignoring reserved, bad, and unused sectors until we reach the last.
-//				cout << "	" << counter << " file(s)	" << tempBytes << " bytes" << endl;
-//				cout << "			" << " bytes free" << endl;	// to calculate bytes free, keep track of unused sectors?
 		}
 
 		// Not really needed, since default struct access of members is public anyway
@@ -584,6 +534,26 @@ void checkTime(byte hour, byte minute, byte second, char suffix) {
 	if ('a' != suffix && 'p' != suffix) throw invalid_argument("Incorrect time modifier (i.e., am or pm).");
 }
 
+ulong getBytesUsed(const Floppy::RootDir &rootDir){
+	bytesUsed =0;
+	numOfFiles=0;//0 them out just incase there's a scenario where one was altered but another wasn't
+	for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
+		Floppy::RootDir::Entry entry = rootDir.entries[i];
+
+		if (LAST_DIR_ENTRY == entry.filename[0]) break;
+		if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
+		
+		bytesUsed+= *entry.fileSize;
+		numOfFiles++;
+
+	}
+	return bytesUsed;
+}
+
+int getSectorsUsed(){
+	return bytesUsed/512;
+}
+
 ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directorydump*/) {//could probably use a bool & check it and put this in the other operator out
 	puts("ROOT DIRECTORY:\n");
 	puts("|-----FILENAME-----|-EXTN-|AT|RESV|CRTM|CDRT|LADT|IGNR|LWTM|LWDT|FRST|--SIZE--|\n");
@@ -603,9 +573,11 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 
 void usageMap(){//not sure what arguments it should take in
 	double percUsed = (bytesUsed/1474560);
+	int sectors = getSectorsUsed();
+	double secPerc = (sectors/2880); 
 	cout<<"CAPACITY:	1,474,560b	USED:	" << bytesUsed << " ("<<percUsed<<"%)	FREE:	" << (1474560-bytesUsed) << "	(" << ((1474560-bytesUsed)/1474560) <<"%)"<<endl;
-	cout<<"SECTORS:		2,880		USED:	" <<endl;//Need to keep track of #sectors in use. Probably need to interate through the everything
-	cout<<"FILES:	46	SECOTRS/FILE:	" << endl;//Also keep track of the largest & smallest files
+	cout<<"SECTORS:		2,880		USED:	" << sectors << "(" << secPerc << "%)	FREE:	" << (2880 - sectors) << "("<<((2880-sectors)/2880) <<"%)"endl;
+	cout<<"FILES:	"<<numOfFiles<<"	SECOTRS/FILE:	" << (sectors/numOfFiles) << "	LARGEST:	" << endl;//Also keep track of the largest & smallest files
 	cout<<"\nDISK USAGE BY SECTOR:"<<endl;
 	cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
 	cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
@@ -644,4 +616,39 @@ void usageMap(){//not sure what arguments it should take in
 	cout<<"2640-2719"<<endl;
 	cout<<"2720-2799"<<endl;
 	cout<<"2800-2879"<<endl;//FINALLY
+}
+
+void dumpFAT(){
+	//print out the entire FAT table in HEX
+	//will probably require a helper method? Pass in a range of values?
+	//ie: printThese(0, 19) which will return (in hex) a string or an output the first 19 entires of the FAT
+	//then in the second row we'd pass in printThese(20,39) which returns hex string of those entries?
+	cout<<"0000-0019"<<endl;
+	cout<<"0020-0039"<<endl;
+	cout<<"0040-0059"<<endl;
+	cout<<"0060-0079"<<endl;
+	cout<<"0080-0099"<<endl;
+	cout<<"0100-0119"<<endl;
+	cout<<"0120-0139"<<endl;
+	//etc
+	//the example goes to 2879
+}
+
+bool checkFATS(){//when we dump fat it also wants a check for if the 2 fat tables are the same
+	//iterate through both FAT tables. if(fat1[i]!=fat2[i]) then return false
+	return true;
+}
+
+void fatChain(){
+	//not sure how to handle this
+	//Look at the first logical sector variable of each entry?
+}
+
+void dumpSector(int phySec){
+	//We print out, in hex, the 512 bytes of the specified sector.
+	//But also, the string value of it
+	//ie: 
+	cout << "000" <</*first 20 bytes << the string version of those bytes*//endl;
+	//now do the next 20 bytes again and again until
+	cout <<"500"<</*Last 12 bytes << string version*/
 }
