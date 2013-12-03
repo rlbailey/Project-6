@@ -33,6 +33,6 @@ int main(void) {
 	floppy.copy("WHALE.TXT");
 
 	cout << floppy.rootDir;
-
+printf("%i", sizeof(Floppy::RootDir::Entry));
 	return 0;
 }
