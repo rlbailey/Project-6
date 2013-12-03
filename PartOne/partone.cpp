@@ -221,7 +221,7 @@ struct Floppy {
 						filename[i]=newName[i];
 					}
 				}
-				
+
 			}
 
 			string getLastWriteDate() {
@@ -418,6 +418,8 @@ struct Floppy {
 			}
 		}
 	}
+
+	void rename(string s1, string s2) { }
 };
 
 //ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
@@ -542,7 +544,7 @@ ulong getBytesUsed(const Floppy::RootDir &rootDir){
 
 		if (LAST_DIR_ENTRY == entry.filename[0]) break;
 		if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
-		
+
 		bytesUsed+= *entry.fileSize;
 		numOfFiles++;
 
@@ -574,9 +576,9 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 void usageMap(){//not sure what arguments it should take in
 	double percUsed = (bytesUsed/1474560);
 	int sectors = getSectorsUsed();
-	double secPerc = (sectors/2880); 
+	double secPerc = (sectors/2880);
 	cout<<"CAPACITY:	1,474,560b	USED:	" << bytesUsed << " ("<<percUsed<<"%)	FREE:	" << (1474560-bytesUsed) << "	(" << ((1474560-bytesUsed)/1474560) <<"%)"<<endl;
-	cout<<"SECTORS:		2,880		USED:	" << sectors << "(" << secPerc << "%)	FREE:	" << (2880 - sectors) << "("<<((2880-sectors)/2880) <<"%)"endl;
+	cout<<"SECTORS:		2,880		USED:	" << sectors << "(" << secPerc << "%)	FREE:	" << (2880 - sectors) << "("<<((2880-sectors)/2880) <<"%)"<<endl;
 	cout<<"FILES:	"<<numOfFiles<<"	SECOTRS/FILE:	" << (sectors/numOfFiles) << "	LARGEST:	" << endl;//Also keep track of the largest & smallest files
 	cout<<"\nDISK USAGE BY SECTOR:"<<endl;
 	cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
@@ -647,8 +649,8 @@ void fatChain(){
 void dumpSector(int phySec){
 	//We print out, in hex, the 512 bytes of the specified sector.
 	//But also, the string value of it
-	//ie: 
-	cout << "000" <</*first 20 bytes << the string version of those bytes*//endl;
+	//ie:
+	cout << "000" <</*first 20 bytes << the string version of those bytes*/endl;
 	//now do the next 20 bytes again and again until
-	cout <<"500"<</*Last 12 bytes << string version*/
+	cout <<"500";/*<<Last 12 bytes << string version*/
 }
