@@ -2,7 +2,7 @@ CC=g++
 CFLAGS=-c -Wall
 LDFLAGS=
 SOURCES=main.cpp
-TESTSOURCES=Test.cpp
+TESTSOURCES=test.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 TESTOBJECTS=$(TESTSOURCES:.cpp=.o)
 EXECUTABLE=PartOne

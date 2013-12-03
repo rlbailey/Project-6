@@ -168,6 +168,12 @@ struct Floppy {
 
 			return NULL;
 		}
+
+		void deleteChain(ushort index) {
+			if (*entries[index] != LAST_SECTOR) deleteChain(*entries[index]);
+
+			entries[index] = UNUSED_SECTOR;
+		}
 	};
 
 	struct RootDir {
@@ -422,6 +428,7 @@ struct Floppy {
 
 			if (strcmp(c, filename.c_str())) {
 				*entry->filename = EMPTY_DIR_ENTRY;
+				fat.deleteChain(*entry->firstLogicalSector);
 				return;
 			}
 		}
