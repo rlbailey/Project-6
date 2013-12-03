@@ -216,7 +216,7 @@ struct Floppy {
 				if(temp > 8){
 					temp = (temp - (temp-8));
 				}
-				if(getFileName() == oldName){
+				if(getFilename() == oldName){
 					for(int i = 0; i<temp; i++){
 						filename[i]=newName[i];
 					}
