@@ -69,7 +69,6 @@ struct Floppy {
 				ushort offset = 3 * index / 2;
 
 				this->index = index;
-				*this = UNUSED_SECTOR;
 
 				/*
 				 * These are FAT entry ushort pointers.
@@ -79,6 +78,8 @@ struct Floppy {
 				 */
 				fat1Sector = reinterpret_cast<ushort*>(floppy.bytes + FAT1_BASE_BYTE + offset);
 				fat2Sector = reinterpret_cast<ushort*>(floppy.bytes + FAT2_BASE_BYTE + offset);
+
+				*this = UNUSED_SECTOR;
 			}
 
 			bool isFree() {
