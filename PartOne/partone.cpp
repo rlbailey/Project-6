@@ -106,21 +106,21 @@ struct Floppy {
 					 * fat1Sector is a ushort* that points to a byte in Floppy.
 					 * If index is odd, we only need to set the 12 LSBs of this pointer.
 					 */
-					*fat1Sector &= 0xF000;	// clear the 12 LSBs without changing the leading nibble.
-					*fat1Sector |= value & 0x0FFF;
-
-					*fat2Sector &= 0xF000;	// clear the 12 LSBs without changing the leading nibble.
-					*fat2Sector |= value & 0x0FFF;
-				} else {
-					/*
-					 * fat1Sector is a ushort* that points to a byte in Floppy.
-					 * If index is odd, we only need to set the 12 LSBs of this pointer.
-					 */
 					*fat1Sector &= 0x000F;	// clear the 12 MSBs without changing the trailing nibble.
 					*fat1Sector |= value << 4;
 
 					*fat2Sector &= 0x000F;	// clear the 12 MSBs without changing the trailing nibble.
 					*fat2Sector |= value << 4;
+				} else {
+					/*
+					 * fat1Sector is a ushort* that points to a byte in Floppy.
+					 * If index is odd, we only need to set the 12 LSBs of this pointer.
+					 */
+					*fat1Sector &= 0xF000;	// clear the 12 LSBs without changing the leading nibble.
+					*fat1Sector |= value & 0x0FFF;
+
+					*fat2Sector &= 0xF000;	// clear the 12 LSBs without changing the leading nibble.
+					*fat2Sector |= value & 0x0FFF;
 				}
 
 				return *this;
@@ -134,9 +134,9 @@ struct Floppy {
 			 */
 			ushort operator*(void) {
 				if (index & 0x1) {
-					return *fat1Sector & 0xFFF0;
-				} else {
 					return *fat1Sector >> 4;
+				} else {
+					return *fat1Sector & 0xFFF0;
 				}
 			}
 
