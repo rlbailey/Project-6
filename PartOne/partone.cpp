@@ -617,3 +617,38 @@ void usageMap(){//not sure what arguments it should take in
 	cout<<"2720-2799"<<endl;
 	cout<<"2800-2879"<<endl;//FINALLY
 }
+
+void dumpFAT(){
+	//print out the entire FAT table in HEX
+	//will probably require a helper method? Pass in a range of values?
+	//ie: printThese(0, 19) which will return (in hex) a string or an output the first 19 entires of the FAT
+	//then in the second row we'd pass in printThese(20,39) which returns hex string of those entries?
+	cout<<"0000-0019"<<endl;
+	cout<<"0020-0039"<<endl;
+	cout<<"0040-0059"<<endl;
+	cout<<"0060-0079"<<endl;
+	cout<<"0080-0099"<<endl;
+	cout<<"0100-0119"<<endl;
+	cout<<"0120-0139"<<endl;
+	//etc
+	//the example goes to 2879
+}
+
+bool checkFATS(){//when we dump fat it also wants a check for if the 2 fat tables are the same
+	//iterate through both FAT tables. if(fat1[i]!=fat2[i]) then return false
+	return true;
+}
+
+void fatChain(){
+	//not sure how to handle this
+	//Look at the first logical sector variable of each entry?
+}
+
+void dumpSector(int phySec){
+	//We print out, in hex, the 512 bytes of the specified sector.
+	//But also, the string value of it
+	//ie: 
+	cout << "000" <</*first 20 bytes << the string version of those bytes*//endl;
+	//now do the next 20 bytes again and again until
+	cout <<"500"<</*Last 12 bytes << string version*/
+}
