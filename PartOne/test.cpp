@@ -45,7 +45,7 @@ TEST_F(FATTest, CopyTest) {
 
 	EXPECT_EQ(3, *entries[2]);
 	EXPECT_EQ(4, *entries[3]);
-	EXPECT_EQ(0xFF8, *entries[3]);
+	EXPECT_EQ(0xFF8, *entries[4]);
 }
 
 class DirTest : public testing::Test {
@@ -72,9 +72,9 @@ TEST_F(DirTest, CopyTest) {
 
 	EXPECT_STREQ("CONSTITU", entry->getFilename().c_str());
 	EXPECT_STREQ("TXT", entry->getExtension().c_str());
-	EXPECT_STREQ("11-19-2013", toDate(*entry->lastAccessDate).c_str());
-	EXPECT_STREQ(" 4:38:48p", toTime(*entry->lastWriteTime).c_str());
-	EXPECT_STREQ("11-19-2013", toDate(*entry->lastWriteDate).c_str());
+	EXPECT_STREQ("12-01-2013", toDate(*entry->lastAccessDate).c_str());
+	EXPECT_STREQ(" 9:33:16a", toTime(*entry->lastWriteTime).c_str());
+	EXPECT_STREQ("12-01-2013", toDate(*entry->lastWriteDate).c_str());
 	EXPECT_EQ(2, *entry->firstLogicalSector);
 	EXPECT_EQ(1287, *entry->fileSize);
 }

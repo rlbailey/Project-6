@@ -61,7 +61,7 @@ struct Floppy {
 		// Composed of 12 bits.
 		struct Entry {
 			short index;
-			ushort *fat1Sector, *fat2Sector;	// pointer alias to the actual byte in Floppy
+			byte *fat1Sector, *fat2Sector;	// pointer alias to the actual byte in Floppy
 
 			Entry(void) : index(-1), fat1Sector(NULL), fat2Sector(NULL) { }
 
@@ -69,16 +69,8 @@ struct Floppy {
 				ushort offset = 3 * index / 2;
 
 				this->index = index;
-
-				/*
-				 * These are FAT entry ushort pointers.
-				 * However, Floppy has byte-sized pointers.
-				 * These reinterpret_cast calls tell each that each FAT entry pointer should resize the byte pointers to suit their needs.
-				 * We're working at a low-level that allows us to cross the byte pointer boundaries.
-				 */
-				fat1Sector = reinterpret_cast<ushort*>(floppy.bytes + FAT1_BASE_BYTE + offset);
-				fat2Sector = reinterpret_cast<ushort*>(floppy.bytes + FAT2_BASE_BYTE + offset);
-
+				fat1Sector = floppy.bytes + FAT1_BASE_BYTE + offset;
+				fat2Sector = floppy.bytes + FAT2_BASE_BYTE + offset;
 				*this = UNUSED_SECTOR;
 			}
 
@@ -102,25 +94,23 @@ struct Floppy {
 				}
 
 				if (index & 0x1) {
-					/*
-					 * fat1Sector is a ushort* that points to a byte in Floppy.
-					 * If index is odd, we only need to set the 12 LSBs of this pointer.
-					 */
-					*fat1Sector &= 0x000F;	// clear the 12 MSBs without changing the trailing nibble.
-					*fat1Sector |= value << 4;
+					// if this FAT entry uses the 4 LSB of this byte + the next byte
+					fat1Sector[0] &= 0xF0;
+					fat1Sector[0] |= value >> 8;
+					fat1Sector[1] = value & 0xFF;
 
-					*fat2Sector &= 0x000F;	// clear the 12 MSBs without changing the trailing nibble.
-					*fat2Sector |= value << 4;
+					fat2Sector[0] &= 0xF0;
+					fat2Sector[0] |= value >> 8;
+					fat2Sector[1] = value & 0xFF;
 				} else {
-					/*
-					 * fat1Sector is a ushort* that points to a byte in Floppy.
-					 * If index is odd, we only need to set the 12 LSBs of this pointer.
-					 */
-					*fat1Sector &= 0xF000;	// clear the 12 LSBs without changing the leading nibble.
-					*fat1Sector |= value & 0x0FFF;
+					// if this FAT entry uses 1 byte + the 4 MSB of the next byte
+					fat1Sector[0] = value >> 4;
+					fat1Sector[1] &= 0xF;
+					fat1Sector[1] |= (value & 0xF) << 4;
 
-					*fat2Sector &= 0xF000;	// clear the 12 LSBs without changing the leading nibble.
-					*fat2Sector |= value & 0x0FFF;
+					fat2Sector[0] = value >> 4;
+					fat2Sector[1] &= 0xF;
+					fat2Sector[1] |= (value & 0xF) << 4;
 				}
 
 				return *this;
@@ -134,9 +124,9 @@ struct Floppy {
 			 */
 			ushort operator*(void) {
 				if (index & 0x1) {
-					return *fat1Sector >> 4;
+					return (fat1Sector[0] & 0xF << 8) + fat1Sector[1];
 				} else {
-					return *fat1Sector & 0xFFF0;
+					return (fat1Sector[0] << 4) + (fat1Sector[1] >> 4);
 				}
 			}
 
@@ -582,7 +572,7 @@ void usageMap(){//not sure what arguments it should take in
 	cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
 	cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
 	for(int i = 0; i<35;i++){
-		printf("%04D", starter, "-", ender/*, the sector printing*/)
+		printf("%04D", starter, "-", ender/*, the sector printing*/);
 		starter +=20;
 		ender+=20;
 	}
