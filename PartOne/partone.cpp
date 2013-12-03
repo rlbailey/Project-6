@@ -564,7 +564,7 @@ ulong getBytesUsed(const Floppy::RootDir &rootDir){
 }
 
 int getSectorsUsed(){
-	return bytesUsed*512;
+	return bytesUsed/512;
 }
 
 ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directorydump*/) {//could probably use a bool & check it and put this in the other operator out
