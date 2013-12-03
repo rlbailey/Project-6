@@ -134,9 +134,9 @@ struct Floppy {
 			 */
 			ushort operator*(void) {
 				if (index & 0x1) {
-					return (fat1Sector[0] & 0xF << 8) + fat1Sector[1];
+					return *fat1Sector & 0xFFF0;
 				} else {
-					return (fat1Sector[0] << 4) + (fat1Sector[1] >> 4);
+					return *fat1Sector >> 4;
 				}
 			}
 
