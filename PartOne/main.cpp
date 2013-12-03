@@ -1,7 +1,7 @@
 // CS3242 Operating Systems
 // Fall 2013
 // Project 6: Disks and File Systems
-// Richard L. Bailey
+// Richard L. Bailey & Hue Moua
 // Date: 12/2/2013
 // File: main.cpp
 
@@ -27,15 +27,16 @@ int main(void) {
 //	floppy.copy("CONSTITU.TXT");
 //	floppy.copy("DECLARAT.TXT");
 //	floppy.copy("EMILY.TXT");
-	floppy.copy("IO.SYS");
-	floppy.copy("GETTYSBU.TXT");
+//	floppy.copy("IO.SYS");
+//	floppy.copy("GETTYSBU.TXT");
 //	floppy.copy("SMALL.TXT");
-	floppy.copy("WHALE.TXT");
+//	floppy.copy("WHALE.TXT");
 
-	cout << floppy.rootDir;
+//	cout << floppy.rootDir;
 	
 	bool menu=true;
 	int selection;
+	string searcher;
 	while(menu !=false){
 		cout<<"MENU:"<<endl;
 		cout<<"1) List Directory"<<endl;
@@ -53,12 +54,22 @@ int main(void) {
 		
 		swith(selection){
 			case 1://Call listdirectory
+				cout << floppy.rootDir;
 				break;
 			case 2://call copy
+				cout<<"Name the file you want to copy\n";
+				cin>>searcher;
+				floppy.copy(searcher);
 				break;
 			case 3://call remove
+				cout<<"Name the file you want to remove\n";
+				cin>>searcher;
+				floppy.remove(searcher);//TODO: double check the function name
 				break;
 			case 4://call rename
+				cout<<"Name the file you want to rename\n";
+				cin>>searcher;
+				floppy.rename(searcher);
 				break;
 			case 5://call usage map
 				break;
