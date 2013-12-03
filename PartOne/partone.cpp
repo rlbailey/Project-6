@@ -212,19 +212,16 @@ struct Floppy {
 			}
 
 			void rename(string oldName, string newName){
-				int temp1 = oldName.size();
-				int temp2 = newName.size();
-				if(temp1 > 8){
-					temp1 = (temp1 - (temp1-8));
+				int temp = newName.size();
+				if(temp > 8){
+					temp = (temp - (temp-8));
 				}
-				if(temp2 > 8){
-					temp2 = (temp2 - (temp2-8));
-				}
-				for(int i = 0; i<temp1; i++){
-					if(getFilename() == oldName){
+				if(getFileName() == oldName){
+					for(int i = 0; i<temp; i++){
 						filename[i]=newName[i];
 					}
 				}
+				
 			}
 
 			string getLastWriteDate() {
