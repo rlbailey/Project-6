@@ -573,10 +573,19 @@ void usageMap(){//not sure what arguments it should take in
 	cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
 	for(int i = 0; i<35;i++){
 		printf("%04D", starter, "-", ender/*, the sector printing*/);
-		starter +=20;
-		ender+=20;
+		starter +=80;
+		ender+=80;
 	}
 }
+//Helper method for dumpFAT
+string printFAT(int rangeStart, int rangeEnd){
+	std::stringstream hexString;
+	for(int i = rangeStart; i < rangeEnd; O++){
+		hexString << std::setfill('0') <<  std::hex << entries[i];
+	}
+	return hexString.str();
+}
+
 
 void dumpFAT(){
 	int starter = 0;
@@ -586,7 +595,7 @@ void dumpFAT(){
 	//ie: printThese(0, 19) which will return (in hex) a string or an output the first 19 entires of the FAT
 	//then in the second row we'd pass in printThese(20,39) which returns hex string of those entries?
 	for(int i=0; i< 144; i++){
-		printf("%04D", starter, "-", ender/*,printThese(starter,ender)*/);
+		printf("%04D", starter, "-", ender, ": ", printFAT(starter, ender);
 		starter +=20;
 		ender+=20;
 	}
