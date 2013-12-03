@@ -54,7 +54,6 @@ void checkTime(byte hour, byte minute, byte second, char suffix);
 byte numOfFiles;
 ulong bytesUsed;
 
-
 // Simulate a floppy disk
 struct Floppy {
 	struct FAT {
@@ -62,7 +61,7 @@ struct Floppy {
 		// Composed of 12 bits.
 		struct Entry {
 			short index;
-			byte *fat1Sector, *fat2Sector;	// pointer alias to the actual byte in Floppy
+			ushort *fat1Sector, *fat2Sector;	// pointer alias to the actual byte in Floppy
 
 			Entry(void) : index(-1), fat1Sector(NULL), fat2Sector(NULL) { }
 
@@ -70,9 +69,20 @@ struct Floppy {
 				ushort offset = 3 * index / 2;
 
 				this->index = index;
-				fat1Sector = floppy.bytes + FAT1_BASE_BYTE + offset;
-				fat2Sector = floppy.bytes + FAT2_BASE_BYTE + offset;
 				*this = UNUSED_SECTOR;
+
+				/*
+				 * These are FAT entry ushort pointers.
+				 * However, Floppy has byte-sized pointers.
+				 * These reinterpret_cast calls tell each that each FAT entry pointer should resize the byte pointers to suit their needs.
+				 * We're working at a low-level that allows us to cross the byte pointer boundaries.
+				 */
+				fat1Sector = reinterpret_cast<ushort*>(floppy.bytes + FAT1_BASE_BYTE + offset);
+				fat2Sector = reinterpret_cast<ushort*>(floppy.bytes + FAT2_BASE_BYTE + offset);
+			}
+
+			bool isFree() {
+				return (UNUSED_SECTOR == **this);
 			}
 
 			/*
@@ -90,24 +100,26 @@ struct Floppy {
 					throw exception();
 				}
 
-				if (index % 2 == 0) {
-					// if this FAT entry uses 1 byte + the 4 MSB of the next byte
-					fat1Sector[0] = value >> 4;
-					fat1Sector[1] &= 0xF;
-					fat1Sector[1] |= (value & 0xF) << 4;
+				if (index & 0x1) {
+					/*
+					 * fat1Sector is a ushort* that points to a byte in Floppy.
+					 * If index is odd, we only need to set the 12 LSBs of this pointer.
+					 */
+					*fat1Sector &= 0xF000;	// clear the 12 LSBs without changing the leading nibble.
+					*fat1Sector |= value & 0x0FFF;
 
-					fat2Sector[0] = value >> 4;
-					fat2Sector[1] &= 0xF;
-					fat2Sector[1] |= (value & 0xF) << 4;
+					*fat2Sector &= 0xF000;	// clear the 12 LSBs without changing the leading nibble.
+					*fat2Sector |= value & 0x0FFF;
 				} else {
-					// if this FAT entry uses the 4 LSB of this byte + the next byte
-					fat1Sector[0] &= 0xF0;
-					fat1Sector[0] |= value >> 8;
-					fat1Sector[1] = value & 0xFF;
+					/*
+					 * fat1Sector is a ushort* that points to a byte in Floppy.
+					 * If index is odd, we only need to set the 12 LSBs of this pointer.
+					 */
+					*fat1Sector &= 0x000F;	// clear the 12 MSBs without changing the trailing nibble.
+					*fat1Sector |= value << 4;
 
-					fat2Sector[0] &= 0xF0;
-					fat2Sector[0] |= value >> 8;
-					fat2Sector[1] = value & 0xFF;
+					*fat2Sector &= 0x000F;	// clear the 12 MSBs without changing the trailing nibble.
+					*fat2Sector |= value << 4;
 				}
 
 				return *this;
@@ -120,10 +132,10 @@ struct Floppy {
 			 * Bit packing applies
 			 */
 			ushort operator*(void) {
-				if (index % 2) {
-					return (fat1Sector[0] << 4) + (fat1Sector[1] >> 4);
-				} else {
+				if (index & 0x1) {
 					return (fat1Sector[0] & 0xF << 8) + fat1Sector[1];
+				} else {
+					return (fat1Sector[0] << 4) + (fat1Sector[1] >> 4);
 				}
 			}
 
@@ -150,13 +162,11 @@ struct Floppy {
 
 		Entry* nextFreeEntry(void) {
 			for (ushort i = 0; i < NUM_OF_FAT_ENTRIES; ++i) {
-				if (UNUSED_SECTOR == *entries[i].fat1Sector || LAST_SECTOR == *entries[i].fat1Sector) return &entries[i];
+				if (entries[i].isFree()) return &entries[i];
 			}
 
-			perror("There are no more FAT entries available.");
-			throw exception();
+			return NULL;
 		}
-
 	};
 
 	struct RootDir {
@@ -191,22 +201,26 @@ struct Floppy {
 				fileSize = reinterpret_cast<uint*>(entryBase + FILE_SIZE_OFFSET);
 			}
 
-			void setFilename(char *filename) {
-				strncpy((char*)this->filename, filename, 8);
+			void setFilename(string filename) {
+				for (byte i = 0; i < 8; ++i) this->filename[i] = 0;	// clear the filename first
+
+				strncpy((char*)this->filename, filename.c_str(), 8);
 			}
 
 			// Required because a filename with chars in all 8 elements cannot hold a null-terminating char
-			string getFilename() {
+			string getFilename() const {
 				if (!filename) return "";
 				return string((char*)filename, 8);
 			}
 
-			void setExtension(char *extension) {
-				strncpy((char*)this->extension, extension, 3);
+			void setExtension(string extension) {
+				for (byte i = 0; i < 3; ++i) this->extension[i] = 0;	// clear the extension first
+
+				strncpy((char*)this->extension, extension.c_str(), 3);
 			}
 
 			// Required because an extension with chars in all 3 elements cannot hold a null-terminating char
-			string getExtension() {
+			string getExtension() const {
 				if (!extension) return "";
 				return string((char*)extension, 3);
 			}
@@ -225,7 +239,6 @@ struct Floppy {
 			}
 
 			string getLastWriteDate() {
-//				return toDate(lastWriteDate);
 				if (!lastWriteDate) return "";
 
 				string temp = string(reinterpret_cast<char*>(lastWriteDate));	// turn into a string
@@ -258,6 +271,9 @@ struct Floppy {
 
 				return temp2;
 			}
+
+			// Not really needed, since default struct access of members is public anyway
+			friend ostream& operator<<(ostream &out, const Entry &entry);
 		};
 
 		Entry entries[NUM_OF_DIR_ENTRIES];
@@ -277,7 +293,6 @@ struct Floppy {
 			throw exception();
 		}
 
-		// Setting up basic print skeletons, mostly just messing with things to get a grip on it
 		void listDirectory() {
 			numOfFiles = 0;
 			bytesUsed = 0;
@@ -289,18 +304,18 @@ struct Floppy {
 			for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
 				Entry entry = entries[i];
 
-				if (LAST_DIR_ENTRY == entry.filename[0]) break;
-				if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
+				if (LAST_DIR_ENTRY == *entry.filename) break;
+				if (EMPTY_DIR_ENTRY == *entry.filename) continue;
 
-				printf("%-8s %-3s   %7u %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), *entry.fileSize, toDate(*entry.lastWriteDate).c_str(), toTime(*entry.lastWriteTime).c_str());
+				cout << entry << endl;
 
 				++numOfFiles;
 				bytesUsed += *entry.fileSize;
-				bytesWasted += 512 - (*entry.fileSize % 512);
+				bytesWasted += *entry.fileSize % 512;
 			}
 
 			printf("      %3i file%3s    %7lu bytes\n", numOfFiles, (numOfFiles != 1 ? "(s)" : ""), bytesUsed);
-			printf("                     %7lu bytes free\n", 1474560 - bytesUsed- bytesWasted);	// TODO Must take into account internal fragmentation.
+			printf("                     %7lu bytes free\n", BYTES_IN_FLOPPY - bytesUsed - bytesWasted);
 		}
 
 		// Not really needed, since default struct access of members is public anyway
@@ -313,44 +328,41 @@ struct Floppy {
 	RootDir rootDir;
 
 	Floppy(void) : fat(*this), rootDir(*this) {
-		loadFloppy();
+		loadImage();
 	}
 
+	~Floppy(void) {
+		fclose(file);
+	}
 	// Loads the floppy disk image into floppy
-	void loadFloppy() {
+	void loadImage() {
 		file = fopen(FLP, "rwb");
 
 		if (!file) {
-			perror("Error opening file.");
+			perror("Error opening floppy disk image.");
 			throw exception();
 		}
 
-		ulong i = 0;
-
-		while (!feof(file)) {
-			bytes[i++] = fgetc(file);
-		}
+		fread(bytes, 1, 512, file);
 	}
 
 	void copy(string filename) {
 		FILE *f = fopen(filename.c_str(), "rb");
 
 		if (!f) {
-			perror("Error opening file.");
+			puts("File not found.");
 			return;
 		}
 
 		RootDir::Entry *dirEntry = rootDir.nextFreeEntry();
 		byte dot = filename.find('.');
+		string name = filename.substr(0, dot);
+		string extension = filename.substr(dot + 1);
 		struct stat fileStats;	// Stores file attributes.
 		time_t n;	// The current time.
 		struct tm *now, *access, *write;	// Time structs of file attributes.
 		char createTime[11], createDate[11], lastAccessDate[11], lastWriteTime[11], lastWriteDate[11];	// Temporary buffers.
-		FAT::Entry *fatEntry = fat.nextFreeEntry();
-		ulong i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
-
-		*fatEntry = RESERVED_SECTOR;
-		*dirEntry->firstLogicalSector = fatEntry->index;
+		FAT::Entry *fatEntry = NULL;
 
 		// Retrieve file attributes.
 		stat(filename.c_str(), &fileStats);
@@ -368,8 +380,8 @@ struct Floppy {
 		strftime(lastWriteDate, 11, "%m-%d-%Y", write);
 
 		// Copy possibly non-null-terminated chars.
-		strncpy((char*)dirEntry->filename, filename.substr(0, dot).c_str(), 8);
-		strncpy((char*)dirEntry->extension, filename.substr(dot + 1).c_str(), 3);
+		dirEntry->setFilename(name);
+		dirEntry->setExtension(extension);
 
 		// Copy dates and times into Floppy.
 		*dirEntry->createTime = fromTime(createTime);
@@ -381,73 +393,43 @@ struct Floppy {
 		*dirEntry->fileSize = fileStats.st_size;
 
 		while (!feof(f)) {
-			bytes[i++] = fgetc(f);
+			FAT::Entry *temp = fatEntry;
 
-			if (i % 512 == 0 && !feof(f)) {
-				if (*fatEntry == UNUSED_SECTOR || *fatEntry == LAST_SECTOR) {
-					FAT::Entry *temp = fat.nextFreeEntry();
+			fatEntry = fat.nextFreeEntry();
+			*fatEntry = LAST_SECTOR;
 
-					*temp = RESERVED_SECTOR;
-					*fatEntry = temp->index;	// Overloaded assignment operator:  sets the 12-bit value of a fat entry.
-					fatEntry = temp;
-					i = 512 * (FAT_SECTOR_BASE + fatEntry->index);
-				} else {
-					fatEntry = &fat.entries[fatEntry->index];
-				}
+			if (temp) {
+				// If in a fat chain, then create a link.
+				*temp = fatEntry->index;	// Overloaded assignment operator:  sets the 12-bit value of a FAT entry.
+			} else {
+				// If starting a fat chain, then create a link from the directory entry.
+				*dirEntry->firstLogicalSector = fatEntry->index;
 			}
-		}
 
-		if (*fatEntry != UNUSED_SECTOR && *fatEntry != RESERVED_SECTOR && *fatEntry != BAD_SECTOR && *fatEntry != LAST_SECTOR) {
-			fat.entries[**fatEntry] = UNUSED_SECTOR;
+			fread(bytes, 1, 512, f);
 		}
-
-		*fatEntry = LAST_SECTOR;	// Overloaded assignment operator:  sets the 12-bit value of a fat entry.
 	}
 
 	void remove(string filename) {
 		for (ushort i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
+			RootDir::Entry *entry = &rootDir.entries[i];
 			char c[13];
 
-			strncat(c, (char*)rootDir.entries[i].filename, 8);
+			strncat(c, (char*)entry->filename, 8);
 			strcat(c, ".");
-			strncat(c, (char*)rootDir.entries[i].extension, 3);
+			strncat(c, (char*)entry->extension, 3);
 
-			if (strcmp(filename.c_str(), c)) {
-				rootDir.entries[i].firstLogicalSector = UNUSED_SECTOR;
-				break;
+			if (strcmp(c, filename.c_str())) {
+				*entry->filename = EMPTY_DIR_ENTRY;
+				return;
 			}
 		}
+
+		puts("File not found.");
 	}
 
 	void rename(string s1, string s2) { }
 };
-
-//ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
-//	/*byte*/ numOfFiles = 0;//Declared these as global variables so they can be called by other dumps
-//	/*long*/ bytesUsed = 0;
-//	ulong bytesWasted = 0;
-//
-//	puts("Volume Serial Number is 0859-1A04\n");
-//	puts("Directory of C:\\\n\n");
-//
-//	for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
-//		Floppy::RootDir::Entry entry = rootDir.entries[i];
-//
-//		if (LAST_DIR_ENTRY == entry.filename[0]) break;
-//		if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
-//
-//		printf("%-8s %-3s   %7u %8s   %6s\n", entry.getFilename().c_str(), entry.getExtension().c_str(), *entry.fileSize, toDate(*entry.lastWriteDate).c_str(), toTime(*entry.lastWriteTime).c_str());
-//
-//		++numOfFiles;
-//		bytesUsed += *entry.fileSize;
-//		bytesWasted += 512 - (*entry.fileSize % 512);
-//	}
-//
-//	printf("      %3i file%3s    %7lu bytes\n", numOfFiles, (numOfFiles != 1 ? "(s)" : ""), bytesUsed);
-//	printf("                     %7lu bytes free\n", 1474560 - bytesUsed- bytesWasted);	// TODO Must take into account internal fragmentation.
-//
-//	return out;
-//}
 
 string toDate(ushort date) {
 	byte day = date >> 11;
@@ -554,6 +536,12 @@ ulong getBytesUsed(const Floppy::RootDir &rootDir){
 
 int getSectorsUsed(){
 	return bytesUsed/512;
+}
+
+ostream& operator<<(ostream &out, const Floppy::RootDir::Entry &entry) {
+	printf("%-8s %-3s   %7u %8s   %6s", entry.getFilename().c_str(), entry.getExtension().c_str(), *entry.fileSize, toDate(*entry.lastWriteDate).c_str(), toTime(*entry.lastWriteTime).c_str());
+
+	return out;
 }
 
 ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directorydump*/) {//could probably use a bool & check it and put this in the other operator out

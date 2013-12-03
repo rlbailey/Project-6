@@ -64,7 +64,7 @@ protected:
 };
 
 TEST_F(DirTest, FilenameTest) {
-	EXPECT_STREQ("WHALE", (char*)entry.getFilename().c_str());
+	EXPECT_STREQ("WHALE", entry.getFilename().c_str());
 }
 
 TEST_F(DirTest, ExtensionTest) {

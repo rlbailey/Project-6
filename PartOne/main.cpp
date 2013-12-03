@@ -47,7 +47,8 @@ int main(void) {
 
 		switch(selection){
 			case 1://Call listdirectory
-				cout << floppy.rootDir;
+				floppy.rootDir.listDirectory();
+//				cout << floppy.rootDir;
 				break;
 			case 2://call copy
 				cout<<"Name the file you want to copy to the simulated disk\n";
