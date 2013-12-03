@@ -32,20 +32,30 @@ class FATTest : public testing::Test {
 protected:
 	FATTest(void) { }
 	~FATTest(void) { }
-	virtual void SetUp(void) { }
+	virtual void SetUp(void) {
+		entries = floppy.fat.entries;
+
+		floppy.copy("CONSTITU.TXT");
+	}
+
 	virtual void TearDown(void) { }
 
 	Floppy floppy;
+	Floppy::FAT::Entry *entries;
 };
 
 TEST_F(FATTest, CopyTest) {
-	Floppy::FAT::Entry *entries = floppy.fat.entries;
-
-	floppy.copy("CONSTITU.TXT");
-
 	EXPECT_EQ(3, *entries[2]);
 	EXPECT_EQ(4, *entries[3]);
 	EXPECT_EQ(0xFF8, *entries[4]);
+}
+
+TEST_F(FATTest, DeleteTest) {
+	floppy.remove("CONSTITU.TXT");
+
+	EXPECT_EQ(0, *entries[2]);
+	EXPECT_EQ(0, *entries[3]);
+	EXPECT_EQ(0, *entries[4]);
 }
 
 class DirTest : public testing::Test {
@@ -54,22 +64,18 @@ protected:
 	~DirTest(void) { }
 	virtual void SetUp(void)
 	{
-//		floppy.copy("WHALE.TXT");
-//		floppy.rootDir.entries[0].initialize(floppy, 0, "WHALE", "TXT", 0, 0, 0, 0, 0, 0, 0xF21, 0XB11, 0, (unsigned long)1193405);
-//		entry = floppy.rootDir.entries[0];
+		entry = &floppy.rootDir.entries[0];
+
+		floppy.copy("CONSTITU.TXT");
 	}
 
 	virtual void TearDown(void) { }
 
 	Floppy floppy;
-	Floppy::RootDir::Entry entry;
+	Floppy::RootDir::Entry *entry;
 };
 
 TEST_F(DirTest, CopyTest) {
-	Floppy::RootDir::Entry *entry = &floppy.rootDir.entries[0];
-
-	floppy.copy("CONSTITU.TXT");
-
 	EXPECT_STREQ("CONSTITU", entry->getFilename().c_str());
 	EXPECT_STREQ("TXT", entry->getExtension().c_str());
 	EXPECT_STREQ("12-01-2013", toDate(*entry->lastAccessDate).c_str());
@@ -77,6 +83,11 @@ TEST_F(DirTest, CopyTest) {
 	EXPECT_STREQ("12-01-2013", toDate(*entry->lastWriteDate).c_str());
 	EXPECT_EQ(2, *entry->firstLogicalSector);
 	EXPECT_EQ(1287, *entry->fileSize);
+}
+
+TEST_F(DirTest, DeleteTest) {
+	floppy.remove("CONSITU.TXT");
+	EXPECT_EQ(0xE5, *entry->filename);
 }
 
 class StringTest : public testing::Test {
