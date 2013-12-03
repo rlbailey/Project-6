@@ -9,14 +9,6 @@
 
 #include "partone.cpp"
 
-//TODO:
-//Implement a method to fill a directory entry. This will also make an entry in both FATs
-///Just randomly generate letters?
-//Implement a method that renames a file in a directory entry. Easiest thing ever??
-//Implement a method to delete a file. Delete it the directory entry and its location in the FATs
-//Implement print methods for FAT, Directory, Sectorand Disk Usage
-//A Main method that will call all of these?
-
 Floppy *f;
 
 int main(void) {
@@ -37,6 +29,7 @@ int main(void) {
 	bool menu=true;
 	int selection;
 	string searcher;
+	string replacer;
 	while(menu !=false){
 		cout<<"MENU:"<<endl;
 		cout<<"1) List Directory"<<endl;
@@ -57,19 +50,21 @@ int main(void) {
 				cout << floppy.rootDir;
 				break;
 			case 2://call copy
-				cout<<"Name the file you want to copy\n";
+				cout<<"Name the file you want to copy to the simulated disk\n";
 				cin>>searcher;
 				floppy.copy(searcher);
 				break;
 			case 3://call remove
-				cout<<"Name the file you want to remove\n";
+				cout<<"Name the file you want to delete\n";
 				cin>>searcher;
 				floppy.remove(searcher);//TODO: double check the function name
 				break;
 			case 4://call rename
 				cout<<"Name the file you want to rename\n";
 				cin>>searcher;
-				floppy.rename(searcher);
+				cout<<"New name:\n";
+				cin>>replacer;
+				floppy.rename(searcher, replacer);
 				break;
 			case 5://call usage map
 				break;
