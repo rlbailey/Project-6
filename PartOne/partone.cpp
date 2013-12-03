@@ -54,17 +54,6 @@ void checkTime(byte hour, byte minute, byte second, char suffix);
 byte numOfFiles;
 ulong bytesUsed;
 
-struct Sector {
-	// # bytes? 512
-	// basically an array? Array of 512 bytes?
-};
-
-
-
-struct Track {
-	// make 18 sectors
-	// array of sectors .. ?
-};
 
 // Simulate a floppy disk
 struct Floppy {
@@ -168,11 +157,6 @@ struct Floppy {
 			throw exception();
 		}
 
-		// so how do we take this from bytes to bits
-		// also, do we need a second version of this since when we look at the next entry's portion1 to grab half of it ...
-		// ... then its portion 3 is fine?
-		// consider counting 1 entry as 2?
-		// unsigned char portion4 through 6, and then 3 and 4 just "share" somehow?
 	};
 
 	struct RootDir {
@@ -292,8 +276,8 @@ struct Floppy {
 
 		// Setting up basic print skeletons, mostly just messing with things to get a grip on it
 		void listDirectory() {
-			/*byte*/ numOfFiles = 0;
-			/*ulong*/ bytesUsed = 0;
+			numOfFiles = 0;
+			bytesUsed = 0;
 			ulong bytesWasted = 0;
 
 			puts("Volume Serial Number is 0859-1A04\n");
