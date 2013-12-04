@@ -59,7 +59,7 @@ int main(void) {
 			case 3://call remove
 				cout<<"Name the file you want to delete\n";
 				cin>>searcher;
-				floppy.remove(searcher);//TODO: double check the function name
+				floppy.remove(searcher);
 				break;
 			case 4://call rename
 				cout<<"Name the file you want to rename\n";
@@ -75,7 +75,7 @@ int main(void) {
 				cout << floppy.rootDir;
 				break;
 			case 7://call fat dump
-				floppy.dumpFAT();
+				floppy.Entry.dumpFAT();
 				cout<<"SECONDARY FAT TABLE CONSISTENCY CHECK: \n";
 				if(flopy.checkFATS() == true)
 					cout<<"The secondary FAT table DOES match the primary FAT table."<<endl;
