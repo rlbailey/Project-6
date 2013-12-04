@@ -85,11 +85,7 @@ struct Floppy {
 			 */
 			Entry& operator=(const ushort &value) {
 				if (!fat1Sector || !fat2Sector) {
-					char s[40];
-
 					printf("FAT entry %i was not initialized\n", index);
-
-					return NULL;
 				} else if (index & 0x1) {
 					// if this FAT entry uses the 4 LSB of this byte + the next byte
 					fat1Sector[0] &= 0xF0;
@@ -196,9 +192,14 @@ struct Floppy {
 			}
 
 			void setFilename(string filename) {
+				byte dot = filename.find('.');
+				string name = filename;
+
+				if (dot >= 0) name = filename.substr(0, dot);
+
 				for (byte i = 0; i < 8; ++i) this->filename[i] = 0;	// clear the filename first
 
-				strncpy((char*)this->filename, filename.c_str(), 8);
+				strncpy((char*)this->filename, name.c_str(), 8);
 			}
 
 			// Required because a filename with chars in all 8 elements cannot hold a null-terminating char
@@ -208,7 +209,12 @@ struct Floppy {
 				return string((char*)filename, 8);
 			}
 
-			void setExtension(string extension) {
+			void setExtension(string filename) {
+				byte dot = filename.find('.');
+				string extension = "";
+
+				if (dot >= 0) extension = filename.substr(dot + 1);
+
 				for (byte i = 0; i < 3; ++i) this->extension[i] = 0;	// clear the extension first
 
 				strncpy((char*)this->extension, extension.c_str(), 3);
@@ -289,7 +295,16 @@ struct Floppy {
 		}
 
 		void remove(ushort index) {
-			*entries[index].filename = EMPTY_DIR_ENTRY;
+			if (index < 0 || index > NUM_OF_DIR_ENTRIES) {
+				puts("Invalid directory entry selected for deletion.");
+			} else {
+				*entries[index].filename = EMPTY_DIR_ENTRY;
+			}
+		}
+
+		void rename(ushort index, string filename) {
+			entries[index].setFilename(filename);
+			entries[index].setExtension(filename);
 		}
 
 		Entry* nextFreeEntry() {
@@ -346,7 +361,7 @@ struct Floppy {
 		file = fopen(FLP, "rwb");
 
 		if (!file) {
-			perror("Error opening floppy disk image.");
+			puts("Error opening floppy disk image.");
 		} else {
 			fread(bytes, 1, 512, file);
 		}
@@ -361,9 +376,6 @@ struct Floppy {
 		}
 
 		RootDir::Entry *dirEntry = rootDir.nextFreeEntry();
-		byte dot = filename.find('.');
-		string name = filename.substr(0, dot);
-		string extension = filename.substr(dot + 1);
 		struct stat fileStats;	// Stores file attributes.
 		time_t n;	// The current time.
 		struct tm *now, *access, *write;	// Time structs of file attributes.
@@ -386,8 +398,8 @@ struct Floppy {
 		strftime(lastWriteDate, 11, "%m-%d-%Y", write);
 
 		// Copy possibly non-null-terminated chars.
-		dirEntry->setFilename(name);
-		dirEntry->setExtension(extension);
+		dirEntry->setFilename(filename);
+		dirEntry->setExtension(filename);
 
 		// Copy dates and times into Floppy.
 		*dirEntry->createTime = fromTime(createTime);
@@ -428,7 +440,13 @@ struct Floppy {
 	}
 
 	void rename(string oldName, string newName) {
-//		for ()
+		ushort i = rootDir.find(oldName);
+
+		if (i >= 0) {
+			rootDir.rename(i, newName);
+		} else {
+			puts("File not found.");
+		}
 	}
 };
 
