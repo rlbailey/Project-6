@@ -30,12 +30,9 @@ TEST_F(FloppyTest, DefaultConstructorTest) {
 
 class FATTest : public testing::Test {
 protected:
-	FATTest(void) { }
+	FATTest(void) : entries(floppy.fat.entries) { }
 	~FATTest(void) { }
-	virtual void SetUp(void) {
-		entries = floppy.fat.entries;
-	}
-
+	virtual void SetUp(void) { }
 	virtual void TearDown(void) { }
 
 	Floppy floppy, copied, deleted;
@@ -61,12 +58,9 @@ TEST_F(FATTest, DeleteTest) {
 
 class DirTest : public testing::Test {
 protected:
-	DirTest(void) { }
+	DirTest(void) : entry(&floppy.rootDir.entries[0]) { }
 	~DirTest(void) { }
-	virtual void SetUp(void)
-	{
-		entry = &floppy.rootDir.entries[0];
-	}
+	virtual void SetUp(void) { }
 
 	virtual void TearDown(void) { }
 
@@ -79,9 +73,9 @@ TEST_F(DirTest, CopyTest) {
 
 	EXPECT_STREQ("CONSTITU", entry->getFilename().c_str());
 	EXPECT_STREQ("TXT", entry->getExtension().c_str());
-	EXPECT_STREQ("12-01-2013", toDate(*entry->lastAccessDate).c_str());
-	EXPECT_STREQ(" 9:33:16a", toTime(*entry->lastWriteTime).c_str());
-	EXPECT_STREQ("12-01-2013", toDate(*entry->lastWriteDate).c_str());
+	EXPECT_STREQ("11-19-2013", toDate(*entry->lastAccessDate).c_str());
+	EXPECT_STREQ(" 4:38:48p", toTime(*entry->lastWriteTime).c_str());
+	EXPECT_STREQ("11-19-2013", toDate(*entry->lastWriteDate).c_str());
 	EXPECT_EQ(2, *entry->firstLogicalSector);
 	EXPECT_EQ(1287, *entry->fileSize);
 }

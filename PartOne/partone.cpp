@@ -13,9 +13,11 @@
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
+#include <locale.h>
 
 #define FLP "fdd.flp"
 #define BYTES_IN_FLOPPY 1474560
+#define SECTORS_IN_FLOPPY 2880
 #define BYTES_PER_FAT 4608
 #define NUM_OF_FAT_ENTRIES 3072
 #define FAT1_BASE_BYTE 512
@@ -506,7 +508,44 @@ struct Floppy {
 			}
 
 		}
+	}
 
+	void printDiskUsageMap() {
+		float percUsed = 100.0 * bytesUsed / BYTES_IN_FLOPPY;
+		ushort sectors = getSectorsUsed();
+		float secPerc = sectors / SECTORS_IN_FLOPPY;
+		ushort largest = 0, smallest = 0;
+
+		setlocale(LC_NUMERIC, "");
+
+		printf("CAPACITY: %'9ib   USED:  %'9lub (%5.1f%%)   FREE: %'9lub (%5.1f%%)\n", BYTES_IN_FLOPPY, bytesUsed, percUsed, BYTES_IN_FLOPPY - bytesUsed, 100 - percUsed);
+		printf("SECTORS: %'5i         USED: %'5i (%5.1f%%)         FREE: %'5i (%5.1f%%)\n", SECTORS_IN_FLOPPY, sectors, secPerc, SECTORS_IN_FLOPPY - sectors, 100.0 - secPerc);
+		printf("FILES: %'5i   SECTORS/FILE: %'8.2f      LARGEST: %'5is  SMALLEST: %'5is\n\n", numOfFiles, 1.0 * sectors / numOfFiles, largest, smallest);
+		printf("DISK USAGE BY SECTOR:\n           ");
+
+		for (byte i = 0; i < 8; ++i) printf("|----+----");
+
+		puts("");
+
+		for (ushort i = 0; i < 2880; i += 80) {
+			printf("%04i-%04i: ", i, i + 80);
+
+			for (ushort j = 0; j < 80; ++j) {
+				if (i + j == 0) {
+					printf("B");
+				} else if (i + j < 19) {
+					printf("F");
+				} else if (i + j < 33) {
+					printf("R");
+				} else if (UNUSED_SECTOR == *fat.entries[i]) {
+					printf(".");
+				} else {
+					printf("X");
+				}
+			}
+
+			puts("");
+		}
 	}
 
 	void usageMap(){//not sure what arguments it should take in

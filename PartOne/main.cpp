@@ -26,6 +26,10 @@ int main(void) {
 
 //	cout << floppy.rootDir;
 
+	floppy.printDiskUsageMap();
+
+	return 0;
+
 	bool menu=true;
 	int selection;
 	string searcher;
