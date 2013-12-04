@@ -26,7 +26,7 @@ int main(void) {
 
 //	cout << floppy.rootDir;
 
-	cout << floppy.rootDir;
+	cout << floppy.fat;
 	floppy.printDiskUsageMap();
 
 	return 0;
@@ -80,7 +80,7 @@ int main(void) {
 				cout << floppy.rootDir;
 				break;
 			case 7://call fat dump
-				floppy.fat.dumpFAT();
+				cout << floppy.fat;
 				cout<<"SECONDARY FAT TABLE CONSISTENCY CHECK: \n";
 				if(floppy.checkFATS() == true)
 					cout<<"The secondary FAT table DOES match the primary FAT table."<<endl;
