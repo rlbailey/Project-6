@@ -81,7 +81,7 @@ int main(void) {
 			case 7://call fat dump
 				floppy.fat.dumpFAT();
 				cout<<"SECONDARY FAT TABLE CONSISTENCY CHECK: \n";
-				if(checkFATS() == true)
+				if(floppy.checkFATS() == true)
 					cout<<"The secondary FAT table DOES match the primary FAT table."<<endl;
 				else
 					cout<<"The secondary FAT table DOES NOT match the primary FAT table."<<endl;

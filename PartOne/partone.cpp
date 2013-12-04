@@ -598,11 +598,11 @@ struct Floppy {
 			byteSectorEnd +=20;
 		}
 	}
-	
+
 	bool checkFATS(){
 		bool same = true;
-		for(int i= 512; i< 5120; i++);{
-			if(byte[i] != byte[i+4608])
+		for(int i= 512; i< 5120; i++){
+			if(bytes[i] != bytes[i+4608])
 				return false;
 		}
 		return same;
