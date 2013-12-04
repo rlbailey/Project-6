@@ -22,7 +22,6 @@
 #define NUM_OF_FAT_ENTRIES 3072
 #define FAT1_BASE_BYTE 512
 #define FAT2_BASE_BYTE 5120
-#define BYTES_IN_FAT 4320
 #define UNUSED_SECTOR 0x0
 #define RESERVED_SECTOR 0xFF0
 #define BAD_SECTOR 0xFF7
@@ -166,6 +165,30 @@ struct Floppy {
 
 			entries[index] = UNUSED_SECTOR;
 		}
+
+		//Helper method for dumpFAT
+		string printFAT(int rangeStart, int rangeEnd){
+			stringstream hexString;
+			for(int i = rangeStart; i < rangeEnd; i++){
+				hexString << setfill('0') <<  std::hex << *entries[i] <<" ";
+			}
+			return hexString.str();
+		}
+
+
+		void dumpFAT(){
+			int starter = 0;
+			int ender = 19;
+			//print out the entire FAT table in HEX
+			//will probably require a helper method? Pass in a range of values?
+			//ie: printThese(0, 19) which will return (in hex) a string or an output the first 19 entires of the FAT
+			//then in the second row we'd pass in printThese(20,39) which returns hex string of those entries?
+			for(int i=0; i< 144; i++){
+				printf("%04D", starter, "-", ender, ": ", printFAT(starter, ender).c_str());
+				starter +=20;
+				ender+=20;
+			}
+		}
 	};
 
 	struct RootDir {
@@ -295,7 +318,7 @@ struct Floppy {
 				entries[i].initialize(floppy, i);
 			}
 		}
-
+		
 		ushort find(string filename) {
 			for (ushort i = 0; i < NUM_OF_DIR_ENTRIES && LAST_DIR_ENTRY != entries[i].filename; ++i) {
 				if (filename.compare(entries[i].getFilename())) return i;
@@ -324,7 +347,19 @@ struct Floppy {
 
 			return NULL;
 		}
-
+		
+		void fatChain(string name){
+			ushort index = find(name);
+			while(true){
+				if(*entry[index].firstLogicalSector != LAST_SECTOR){
+					cout<<*entry[index].firstLogicalSector<<" ";
+					index = 0;//just a place holder
+				}
+				else
+					break;
+			}
+		}
+		
 		void listDirectory() {
 			numOfFiles = 0;
 			bytesUsed = 0;
@@ -510,9 +545,9 @@ struct Floppy {
 		puts("");
 
 		for (ushort i = 0; i < 2880; i += 80) {
-			printf("%04i-%04i: ", i, i + 79);
+			printf("%04i-%04i: ", i, i + 80);
 
-			for (byte j = 0; j < 80; ++j) {
+			for (ushort j = 0; j < 80; ++j) {
 				if (i + j == 0) {
 					printf("B");
 				} else if (i + j < 19) {
@@ -722,41 +757,4 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 	}
 
 	return out;
-}
-
-ostream& operator<<(ostream &out, const Floppy::FAT &fat) {
-	puts("PRIMARY FAT TABLE:");
-
-	byte *b = fat.entries[0].fat1Sector;
-	bool consistent = true;
-
-	for (ushort i = 0; i < BYTES_IN_FAT; ++i) {
-		if (i % 30 == 0) {
-			printf("\n%04i-%04i: ", 2 * i / 3, 2 * i / 3 + 19);
-		}
-
-		if (i % 3 == 1) {
-			printf("%1x %1x", b[i] >> 4, b[i] & 0xF);
-		} else  {
-			printf("%02x", b[i]);
-		}
-
-		if (i % 3 == 2) {
-			printf(" ");
-		}
-
-		if (b[i] != fat.entries[0].fat2Sector[i]) consistent = false;
-	}
-
-	puts("\n\nSECONDARY FAT TABLE CONSISTENCY CHECK:");
-	printf("The secondary FAT table %s match the primary FAT table.\n\n", (consistent ? "DOES" : "DOES NOT"));
-
-	return out;
-}
-
-void fatChain(string name){
-	//not sure how to handle this
-	//Look at the first logical sector variable of each entry?
-	string flnm;//file name portion of name
-	string exte;//extension portion of name
 }
