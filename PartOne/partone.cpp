@@ -11,6 +11,8 @@
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+#include <sstream>
+#include <iomanip>
 
 #define FLP "fdd.flp"
 #define BYTES_IN_FLOPPY 1474560
@@ -44,6 +46,9 @@ typedef unsigned char byte;
 
 using namespace std;
 
+byte numOfFiles;
+ulong bytesUsed;
+
 string toDate(ushort date);
 ushort fromDate(string date);
 void checkDate(byte month, byte day, byte year);
@@ -51,8 +56,7 @@ byte maxDays(byte month);
 string toTime(ushort time);
 ushort fromTime(string time);
 void checkTime(byte hour, byte minute, byte second, char suffix);
-byte numOfFiles;
-ulong bytesUsed;
+int getSectorsUsed(void);
 
 // Simulate a floppy disk
 struct Floppy {
@@ -156,6 +160,30 @@ struct Floppy {
 			if (*entries[index] != LAST_SECTOR) deleteChain(*entries[index]);
 
 			entries[index] = UNUSED_SECTOR;
+		}
+
+		//Helper method for dumpFAT
+		string printFAT(int rangeStart, int rangeEnd){
+			stringstream hexString;
+			for(int i = rangeStart; i < rangeEnd; i++){
+				hexString << setfill('0') <<  std::hex << *entries[i];
+			}
+			return hexString.str();
+		}
+
+
+		void dumpFAT(){
+			int starter = 0;
+			int ender = 19;
+			//print out the entire FAT table in HEX
+			//will probably require a helper method? Pass in a range of values?
+			//ie: printThese(0, 19) which will return (in hex) a string or an output the first 19 entires of the FAT
+			//then in the second row we'd pass in printThese(20,39) which returns hex string of those entries?
+			for(int i=0; i< 144; i++){
+				printf("%04D", starter, "-", ender, ": ", printFAT(starter, ender).c_str());
+				starter +=20;
+				ender+=20;
+			}
 		}
 	};
 
@@ -448,6 +476,57 @@ struct Floppy {
 			puts("File not found.");
 		}
 	}
+
+	//helper method for Usage Map
+	string printUsageSectors(int rangeStart, int rangeEnd){
+		string result;
+		int counter = 1;//to keep track of how many bytes
+		bool used = false;//to see if the sector was used
+		rangeStart *=512;//convert sectors to bytes
+		rangeEnd *= 512;//again
+	for(int i = rangeStart; i < rangeEnd; i++){//now iterate through the bytes
+			counter++;
+			if(bytes[i]!= NULL && used==false){
+				used=true;
+			}
+			if(counter==512 && used==true){
+				counter=1;
+				used = false;
+				if(i>16384)//data section, check this first so we don’t do 3 useless checks every single time
+					result.push_back('X');
+				else if(i==511)//first 512 bytes means this is the Boot Sector
+					result.push_back('B');
+				else if(i>511 && i<9216)//this range are the FAT tables
+					result.push_back('F');
+				else if(i>=9216 && i<16384)//The root directory
+					result.push_back('R');
+			}
+			else if(counter==512 && used==false){//unused sector
+				result.push_back('.');
+			}
+
+		}
+
+	}
+
+	void usageMap(){//not sure what arguments it should take in
+		int starter = 0;
+		int ender = 0;
+		double percUsed = (bytesUsed/1474560);
+		int sectors = getSectorsUsed();
+		double secPerc = (sectors/2880);
+		cout<<"CAPACITY:	1,474,560b	USED:	" << bytesUsed << " ("<<percUsed<<"%)	FREE:	" << (1474560-bytesUsed) << "	(" << ((1474560-bytesUsed)/1474560) <<"%)"<<endl;
+		cout<<"SECTORS:		2,880		USED:	" << sectors << "(" << secPerc << "%)	FREE:	" << (2880 - sectors) << "("<<((2880-sectors)/2880) <<"%)"<<endl;
+		cout<<"FILES:	"<<numOfFiles<<"	SECOTRS/FILE:	" << (sectors/numOfFiles) << "	LARGEST:	" << endl;//Also keep track of the largest & smallest files
+		cout<<"\nDISK USAGE BY SECTOR:"<<endl;
+		cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
+		cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
+		for(int i = 0; i<35;i++){
+			printf("%04D", starter, "-", ender,": ", printUsageSectors(starter,ender).c_str(),"\n");
+			starter +=80;
+			ender+=80;
+		}
+	}
 };
 
 string toDate(ushort date) {
@@ -578,79 +657,6 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 	}
 
 	return out;
-}
-//helper method for Usage Map
-string printUsageSectors(int rangeStart, int rangeEnd){
-	string result;
-	int counter = 1;//to keep track of how many bytes
-	bool used = false;//to see if the sector was used
-	rangeStart *=512;//convert sectors to bytes
-	rangeEnd *= 512;//again
-for(int i = rangeStart; i < rangeEnd; i++){//now iterate through the bytes
-		counter++;
-		if(bytes[i]!= NULL && used==false){
-			used=true;
-		}
-		if(counter==512 && used==true){
-			counter=1;
-			used = false;
-			if(i>16384)//data section, check this first so we don’t do 3 useless checks every single time
-				result.push_back('X');
-			else if(i==511)//first 512 bytes means this is the Boot Sector
-				result.push_back('B');
-			else if(i>511 && i<9216)//this range are the FAT tables
-				result.push_back('F');
-			else if(i>=9216 && i<16384)//The root directory
-				result.pushback('R');
-		}
-		else if(counter==512 && used==false){//unused sector
-			result.push_back('.');
-		}
-		
-	}
-	
-}
-
-void usageMap(){//not sure what arguments it should take in
-	int starter = 0;
-	int ender = 0;
-	double percUsed = (bytesUsed/1474560);
-	int sectors = getSectorsUsed();
-	double secPerc = (sectors/2880);
-	cout<<"CAPACITY:	1,474,560b	USED:	" << bytesUsed << " ("<<percUsed<<"%)	FREE:	" << (1474560-bytesUsed) << "	(" << ((1474560-bytesUsed)/1474560) <<"%)"<<endl;
-	cout<<"SECTORS:		2,880		USED:	" << sectors << "(" << secPerc << "%)	FREE:	" << (2880 - sectors) << "("<<((2880-sectors)/2880) <<"%)"<<endl;
-	cout<<"FILES:	"<<numOfFiles<<"	SECOTRS/FILE:	" << (sectors/numOfFiles) << "	LARGEST:	" << endl;//Also keep track of the largest & smallest files
-	cout<<"\nDISK USAGE BY SECTOR:"<<endl;
-	cout<<"		|----+----|----+----|----+----|----+----|----+----|----+----|----+----|----+----"<<endl;
-	cout<<"0000-0079"<</*actually print out used sectors. run a for loop and check if there's somethingthere?*/endl;
-	for(int i = 0; i<35;i++){
-		printf("%04D", starter, "-", ender,": ", printUsageSectors(starter,ender),"\n");
-		starter +=80;
-		ender+=80;
-	}
-}
-//Helper method for dumpFAT
-string printFAT(int rangeStart, int rangeEnd){
-	std::stringstream hexString;
-	for(int i = rangeStart; i < rangeEnd; O++){
-		hexString << std::setfill('0') <<  std::hex << entries[i];
-	}
-	return hexString.str();
-}
-
-
-void dumpFAT(){
-	int starter = 0;
-	int ender = 19;
-	//print out the entire FAT table in HEX
-	//will probably require a helper method? Pass in a range of values?
-	//ie: printThese(0, 19) which will return (in hex) a string or an output the first 19 entires of the FAT
-	//then in the second row we'd pass in printThese(20,39) which returns hex string of those entries?
-	for(int i=0; i< 144; i++){
-		printf("%04D", starter, "-", ender, ": ", printFAT(starter, ender);
-		starter +=20;
-		ender+=20;
-	}
 }
 
 bool checkFATS(){//when we dump fat it also wants a check for if the 2 fat tables are the same
