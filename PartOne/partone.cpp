@@ -350,13 +350,15 @@ struct Floppy {
 		
 		void fatChain(string name){
 			ushort index = find(name);
-			while(true){
+			bool looper = true;
+			while(looper == true){
 				if(*entry[index].firstLogicalSector != LAST_SECTOR){
 					cout<<*entry[index].firstLogicalSector<<" ";
-					index = 0;//just a place holder
+					index = *entry[index];//just a place holder
 				}
 				else
-					break;
+					looper = false;
+				
 			}
 		}
 		
