@@ -79,9 +79,9 @@ int main(void) {
 				cout << floppy.rootDir;
 				break;
 			case 7://call fat dump
-				floppy.Entry.dumpFAT();
+				floppy.fat.dumpFAT();
 				cout<<"SECONDARY FAT TABLE CONSISTENCY CHECK: \n";
-				if(flopy.checkFATS() == true)
+				if(checkFATS() == true)
 					cout<<"The secondary FAT table DOES match the primary FAT table."<<endl;
 				else
 					cout<<"The secondary FAT table DOES NOT match the primary FAT table."<<endl;
@@ -94,7 +94,7 @@ int main(void) {
 				if(sector > 2880 || sector < 33)
 					cout<<"Invalid Physical Sector"<<endl;
 				else
-					floppy.sectorDump(sector);
+					floppy.dumpSector(sector);
 				break;
 			case 10:
 				cout<<"Bye"<<endl;

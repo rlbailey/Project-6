@@ -566,6 +566,38 @@ struct Floppy {
 			ender+=80;
 		}
 	}
+
+	//Helper for dump Sector
+	string printSect(int rangeStart, int rangeEnd){
+		stringstream hexString;
+		stringstream asciiString;
+		for(int i = rangeStart; i < rangeEnd; i++){
+			hexString <<  std::hex << bytes[i] <<" ";
+			asciiString << bytes[i] << " ";
+		}
+		hexString << asciiString;
+		return hexString.str();
+	}
+
+
+	void dumpSector(int phySec){
+		int starter = 0;
+		int byteSector = ((phySec-1)*512);//to set it to the end of previous sector/start of new sector
+		int byteSectorEnd = byteSector + 20;
+		//We print out, in hex, the 512 bytes of the specified sector.
+		//But also, the string value of it
+		for(int i =0; i< 25; i++){
+			if(starter != 500)
+				printf("%03D", starter,": ", printSect(byteSector, byteSectorEnd).c_str());
+			else{
+				byteSectorEnd = byteSector + 12;
+				printf("%03D", starter,": ", printSect(byteSector, byteSectorEnd).c_str());
+			}
+			starter+=20;
+			byteSector +=20;
+			byteSectorEnd +=20;
+		}
+	}
 };
 
 string toDate(ushort date) {
@@ -706,36 +738,4 @@ bool checkFATS(){//when we dump fat it also wants a check for if the 2 fat table
 void fatChain(){
 	//not sure how to handle this
 	//Look at the first logical sector variable of each entry?
-}
-
-//Helper for dump Sector
-string printSect(int rangeStart, int rangeEnd){
-	stringstream hexString;
-	stringstream asciiString;
-	for(int i = rangeStart; i < rangeEnd; i++){
-		hexString <<  std::hex << bytes[i] <<" ";
-		asciiString << (bytes[i]).c_str() << " ";
-	}
-	hexString << asciiString;
-	return hexString.str();
-}
-
-
-void dumpSector(int phySec){
-	int starter = 0;
-	int byteSector = ((phySec-1)*512);//to set it to the end of previous sector/start of new sector
-	int byteSectorEnd = byteSector + 20;
-	//We print out, in hex, the 512 bytes of the specified sector.
-	//But also, the string value of it
-	for(int i =0; i< 25; i++){
-		if(starter != 500)
-			printf("%03D", starter,": ", printSect(byteSector, byteSectorEnd).c_str());
-		else{
-			byteSectorEnd = byteSector + 12;
-			printf("%03D", starter,": ", printSect(byteSector, byteSectorEnd).c_str());
-		}
-		starter+=20;
-		byteSector +=20;
-		byteSectorEnd +=20;
-	}
 }
