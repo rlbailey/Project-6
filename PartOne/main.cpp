@@ -16,16 +16,6 @@ int main(void) {
 
 	f = &floppy;
 
-//	floppy.copy("CONSTITU.TXT");
-//	floppy.copy("DECLARAT.TXT");
-//	floppy.copy("EMILY.TXT");
-//	floppy.copy("IO.SYS");
-//	floppy.copy("GETTYSBU.TXT");
-//	floppy.copy("SMALL.TXT");
-//	floppy.copy("WHALE.TXT");
-
-//	cout << floppy.rootDir;
-
 	cout << floppy.fat;
 	floppy.printDiskUsageMap();
 
@@ -88,6 +78,9 @@ int main(void) {
 					cout<<"The secondary FAT table DOES NOT match the primary FAT table."<<endl;
 				break;
 			case 8://call fat chain
+				cout<<"Filename for which to list allocated (logical) sectors: ";
+				cin>>searcher;
+				floppy.rootDir.fatChain(searcher);
 				break;
 			case 9://call sector dump
 				cout<<"Select Physical sector to display: ";
