@@ -728,7 +728,7 @@ ostream& operator<<(ostream &out, const Floppy::RootDir::Entry &entry) {
 }
 
 // Directory raw dump.
-ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directorydump*/) {//could probably use a bool & check it and put this in the other operator out
+ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir) {
 	puts("ROOT DIRECTORY:");
 	puts("|-----FILENAME-----|-EXTN-|AT|RESV|CRTM|CDRT|LADT|IGNR|LWTM|LWDT|FRST|--SIZE--|");
 
@@ -748,7 +748,9 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 }
 
 
-void fatChain(){
+void fatChain(string name){
 	//not sure how to handle this
 	//Look at the first logical sector variable of each entry?
+	string flnm;//file name portion of name
+	string exte;//extension portion of name
 }
