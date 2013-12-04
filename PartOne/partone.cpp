@@ -61,6 +61,8 @@ string toTime(ushort time);
 ushort fromTime(string time);
 void checkTime(byte hour, byte minute, byte second, char suffix);
 int getSectorsUsed(void);
+int largest=0;
+int smallest =9999;
 
 // Simulate a floppy disk
 struct Floppy {
@@ -415,6 +417,7 @@ struct Floppy {
 	}
 
 	void copy(string filename) {
+		int counter = 0;
 		FILE *f = fopen(filename.c_str(), "rb");
 
 		if (!f) {
@@ -466,13 +469,20 @@ struct Floppy {
 			if (temp) {
 				// If in a fat chain, then create a link.
 				*temp = fatEntry->index;	// Overloaded assignment operator:  sets the 12-bit value of a FAT entry.
+				counter++;
 			} else {
 				// If starting a fat chain, then create a link from the directory entry.
 				*dirEntry->firstLogicalSector = fatEntry->index;
+				counter++;
 			}
 
 			fread(bytes, 1, 512, f);
 		}
+		
+		if(counter > largest)
+			largest = counter;
+		else if(counter < smallest)
+			smallest = counter;
 	}
 
 	void remove(string filename) {
