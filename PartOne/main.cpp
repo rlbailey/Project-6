@@ -30,6 +30,7 @@ int main(void) {
 	int selection;
 	string searcher;
 	string replacer;
+	int sector;
 	while(menu !=false){
 		cout<<"MENU:"<<endl;
 		cout<<"1) List Directory"<<endl;
@@ -68,14 +69,28 @@ int main(void) {
 				floppy.rename(searcher, replacer);
 				break;
 			case 5://call usage map
+				floppy.usageMap();
 				break;
 			case 6://call directory dump
+				cout << floppy.rootDir;
 				break;
 			case 7://call fat dump
+				floppy.dumpFAT();
+				cout<<"SECONDARY FAT TABLE CONSISTENCY CHECK: \n";
+				if(flopy.checkFATS() == true)
+					cout<<"The secondary FAT table DOES match the primary FAT table."<<endl;
+				else
+					cout<<"The secondary FAT table DOES NOT match the primary FAT table."<<endl;
 				break;
 			case 8://call fat chain
 				break;
 			case 9://call sector dump
+				cout<<"Select Physical sector to display: ";
+				cin>>sector;
+				if(sector > 2880 || sector < 33)
+					cout<<"Invalid Physical Sector"<<endl;
+				else
+					floppy.sectorDump(sector);
 				break;
 			case 10:
 				cout<<"Bye"<<endl;
