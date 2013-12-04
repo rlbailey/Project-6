@@ -87,13 +87,10 @@ struct Floppy {
 				if (!fat1Sector || !fat2Sector) {
 					char s[40];
 
-					sprintf(s, "FAT entry %i was not initialized", index);
+					printf("FAT entry %i was not initialized\n", index);
 
-					perror(s);
-					throw exception();
-				}
-
-				if (index & 0x1) {
+					return NULL;
+				} else if (index & 0x1) {
 					// if this FAT entry uses the 4 LSB of this byte + the next byte
 					fat1Sector[0] &= 0xF0;
 					fat1Sector[0] |= value >> 8;
@@ -207,6 +204,7 @@ struct Floppy {
 			// Required because a filename with chars in all 8 elements cannot hold a null-terminating char
 			string getFilename() const {
 				if (!filename) return "";
+
 				return string((char*)filename, 8);
 			}
 
@@ -219,6 +217,7 @@ struct Floppy {
 			// Required because an extension with chars in all 3 elements cannot hold a null-terminating char
 			string getExtension() const {
 				if (!extension) return "";
+
 				return string((char*)extension, 3);
 			}
 
@@ -281,13 +280,24 @@ struct Floppy {
 			}
 		}
 
+		ushort find(string filename) {
+			for (ushort i = 0; i < NUM_OF_DIR_ENTRIES && LAST_DIR_ENTRY != entries[i].filename; ++i) {
+				if (filename.compare(entries[i].getFilename())) return i;
+			}
+
+			return -1;
+		}
+
+		void remove(ushort index) {
+			*entries[index].filename = EMPTY_DIR_ENTRY;
+		}
+
 		Entry* nextFreeEntry() {
 			for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
 				if (EMPTY_DIR_ENTRY == entries[i].filename[0] || LAST_DIR_ENTRY == entries[i].filename[0])  return &entries[i];
 			}
 
-			perror("There are no more directory entries available.");
-			throw exception();
+			return NULL;
 		}
 
 		void listDirectory() {
@@ -337,10 +347,9 @@ struct Floppy {
 
 		if (!file) {
 			perror("Error opening floppy disk image.");
-			throw exception();
+		} else {
+			fread(bytes, 1, 512, file);
 		}
-
-		fread(bytes, 1, 512, file);
 	}
 
 	void copy(string filename) {
@@ -408,25 +417,19 @@ struct Floppy {
 	}
 
 	void remove(string filename) {
-		for (ushort i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
-			RootDir::Entry *entry = &rootDir.entries[i];
-			char c[13];
+		ushort i = rootDir.find(filename);
 
-			strncat(c, (char*)entry->filename, 8);
-			strcat(c, ".");
-			strncat(c, (char*)entry->extension, 3);
-
-			if (strcmp(c, filename.c_str())) {
-				*entry->filename = EMPTY_DIR_ENTRY;
-				fat.deleteChain(*entry->firstLogicalSector);
-				return;
-			}
+		if (i >= 0) {
+			rootDir.remove(i);
+			fat.deleteChain(*rootDir.entries[i].firstLogicalSector);
+		} else {
+			puts("File not found.\n");
 		}
-
-		puts("File not found.");
 	}
 
-	void rename(string s1, string s2) { }
+	void rename(string oldName, string newName) {
+//		for ()
+	}
 };
 
 string toDate(ushort date) {
