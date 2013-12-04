@@ -42,7 +42,9 @@
 #define LAST_WRITE_DATE_OFFSET 24
 #define FIRST_LOGICAL_SECTOR_OFFSET 26
 #define FILE_SIZE_OFFSET 28
-#define FAT_SECTOR_BASE 31
+#define FAT_BASE_SECTOR 31
+#define DATA_AREA_BASE_BYTE 16896
+#define BYTES_IN_DATA_AREA 1457664
 
 typedef unsigned char byte;
 
@@ -309,8 +311,9 @@ struct Floppy {
 		};
 
 		Entry entries[NUM_OF_DIR_ENTRIES];
+		byte *dataArea;
 
-		RootDir(Floppy &floppy) {
+		RootDir(Floppy &floppy) : dataArea(floppy.bytes + DATA_AREA_BASE_BYTE) {
 			for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
 				entries[i].initialize(floppy, i);
 			}
@@ -508,6 +511,8 @@ struct Floppy {
 			}
 
 		}
+
+		return "";
 	}
 
 	void printDiskUsageMap() {
@@ -722,18 +727,21 @@ ostream& operator<<(ostream &out, const Floppy::RootDir::Entry &entry) {
 	return out;
 }
 
+// Directory raw dump.
 ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directorydump*/) {//could probably use a bool & check it and put this in the other operator out
-	puts("ROOT DIRECTORY:\n");
-	puts("|-----FILENAME-----|-EXTN-|AT|RESV|CRTM|CDRT|LADT|IGNR|LWTM|LWDT|FRST|--SIZE--|\n");
+	puts("ROOT DIRECTORY:");
+	puts("|-----FILENAME-----|-EXTN-|AT|RESV|CRTM|CDRT|LADT|IGNR|LWTM|LWDT|FRST|--SIZE--|");
 
-	for (byte i = 0; i < NUM_OF_DIR_ENTRIES; ++i) {
-		Floppy::RootDir::Entry entry = rootDir.entries[i];
+	for (ulong i = 0; i < BYTES_IN_DATA_AREA; ++i) {
+		if (i != 0 && i % 32 == 0) {
+			Floppy::RootDir::Entry entry = rootDir.entries[i / 32 - 1];
 
-		if (LAST_DIR_ENTRY == entry.filename[0]) break;
-		if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
+			printf("%-8s %-3s\n", entry.getFilename().c_str(), entry.getExtension().c_str());
+		} else if (i != 0 && i % 2 == 0) {
+			printf(" ");
+		}
 
-		printf("%-8s %-3s   %7lu %8s   %6s\n", "%X", entry.getFilename().c_str(), entry.getExtension().c_str(), *entry.attributes, *entry.reserved, toTime(*entry.createTime).c_str(), toDate(*entry.createDate).c_str(), toDate(*entry.lastAccessDate).c_str(), *entry.ignore, toTime(*entry.lastWriteTime).c_str(), toDate(*entry.lastWriteDate).c_str(), *entry.firstLogicalSector, *entry.fileSize);
-
+		printf("%02x", rootDir.dataArea[i]);
 	}
 
 	return out;

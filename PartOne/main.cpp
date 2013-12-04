@@ -26,6 +26,7 @@ int main(void) {
 
 //	cout << floppy.rootDir;
 
+	cout << floppy.rootDir;
 	floppy.printDiskUsageMap();
 
 	return 0;
