@@ -166,7 +166,7 @@ struct Floppy {
 		string printFAT(int rangeStart, int rangeEnd){
 			stringstream hexString;
 			for(int i = rangeStart; i < rangeEnd; i++){
-				hexString << setfill('0') <<  std::hex << *entries[i];
+				hexString << setfill('0') <<  std::hex << *entries[i] <<" ";
 			}
 			return hexString.str();
 		}
@@ -484,7 +484,7 @@ struct Floppy {
 		bool used = false;//to see if the sector was used
 		rangeStart *=512;//convert sectors to bytes
 		rangeEnd *= 512;//again
-	for(int i = rangeStart; i < rangeEnd; i++){//now iterate through the bytes
+		for(int i = rangeStart; i < rangeEnd; i++){//now iterate through the bytes
 			counter++;
 			if(bytes[i]!= NULL && used==false){
 				used=true;
@@ -669,15 +669,34 @@ void fatChain(){
 	//Look at the first logical sector variable of each entry?
 }
 
+//Helper for dump Sector
+string printSect(int rangeStart, int rangeEnd){
+	stringstream hexString;
+	stringstream asciiString;
+	for(int i = rangeStart; i < rangeEnd; i++){
+		hexString <<  std::hex << *bytes[i] <<" ";
+		asciiString << (*bytes[i]).c.str() << ” ”;
+	}
+	hexString << asciiString;
+	return hexString.str();
+}
+
+
 void dumpSector(int phySec){
 	int starter = 0;
+	int byteSector = ((phySec-1)*512);//to set it to the end of previous sector/start of new sector
+	int byteSectorEnd = byteSector + 20;
 	//We print out, in hex, the 512 bytes of the specified sector.
 	//But also, the string value of it
 	for(int i =0; i< 25; i++){
 		if(starter != 500)
-			printf("%03D", starter,": "/*print the first 20 bytes of sector physsec, print the actual stored string*/);
-		else
-			printf("%03D", starter,": "/*print the last 12 bytes, print its stored string*/);
+			printf("%03D", starter,": ", printSect(byteSector, byteSectorEnd).c_str());
+		else{
+			byteSectorEnd = byteSector + 12;
+			printf("%03D", starter,": ", printSect(byteSector, byteSectorEnd).c_str());
+		}
 		starter+=20;
+		byteSector +=20;
+		byteSectorEnd +=20;
 	}
 }
