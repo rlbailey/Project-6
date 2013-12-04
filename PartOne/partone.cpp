@@ -674,8 +674,8 @@ string printSect(int rangeStart, int rangeEnd){
 	stringstream hexString;
 	stringstream asciiString;
 	for(int i = rangeStart; i < rangeEnd; i++){
-		hexString <<  std::hex << *bytes[i] <<" ";
-		asciiString << (*bytes[i]).c.str() << ” ”;
+		hexString <<  std::hex << bytes[i] <<" ";
+		asciiString << (bytes[i]).c_str() << " ";
 	}
 	hexString << asciiString;
 	return hexString.str();
