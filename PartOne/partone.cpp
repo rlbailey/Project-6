@@ -598,6 +598,15 @@ struct Floppy {
 			byteSectorEnd +=20;
 		}
 	}
+	
+	bool checkFATS(){
+		bool same = true;
+		for(int i= 512; i< 5120; i++);{
+			if(byte[i] != byte[i+4608])
+				return false;
+		}
+		return same;
+	}
 };
 
 string toDate(ushort date) {
@@ -730,10 +739,6 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 	return out;
 }
 
-bool checkFATS(){//when we dump fat it also wants a check for if the 2 fat tables are the same
-	//iterate through both FAT tables. if(fat1[i]!=fat2[i]) then return false
-	return true;
-}
 
 void fatChain(){
 	//not sure how to handle this
