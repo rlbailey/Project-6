@@ -598,11 +598,11 @@ struct Floppy {
 			byteSectorEnd +=20;
 		}
 	}
-
+	
 	bool checkFATS(){
 		bool same = true;
-		for(int i= 512; i< 5120; i++){
-			if(bytes[i] != bytes[i+4608])
+		for(int i= 512; i< 5120; i++);{
+			if(byte[i] != byte[i+4608])
 				return false;
 		}
 		return same;
@@ -722,7 +722,7 @@ ostream& operator<<(ostream &out, const Floppy::RootDir::Entry &entry) {
 	return out;
 }
 
-ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directorydump*/) {//could probably use a bool & check it and put this in the other operator out
+ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directorydump*/) {
 	puts("ROOT DIRECTORY:\n");
 	puts("|-----FILENAME-----|-EXTN-|AT|RESV|CRTM|CDRT|LADT|IGNR|LWTM|LWDT|FRST|--SIZE--|\n");
 
@@ -733,6 +733,7 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 		if (EMPTY_DIR_ENTRY == entry.filename[0]) continue;
 
 		printf("%-8s %-3s   %7lu %8s   %6s\n", "%X", entry.getFilename().c_str(), entry.getExtension().c_str(), *entry.attributes, *entry.reserved, toTime(*entry.createTime).c_str(), toDate(*entry.createDate).c_str(), toDate(*entry.lastAccessDate).c_str(), *entry.ignore, toTime(*entry.lastWriteTime).c_str(), toDate(*entry.lastWriteDate).c_str(), *entry.firstLogicalSector, *entry.fileSize);
+		printf(entry.getFilename().c_str(), " ", entry.getExtension().c_str());//needs to post in plain text the FILENAME and EXT
 
 	}
 
@@ -740,7 +741,9 @@ ostream& operator<<(ostream &out, const Floppy::RootDir &rootDir/*, bool directo
 }
 
 
-void fatChain(){
+void fatChain(string name){
 	//not sure how to handle this
 	//Look at the first logical sector variable of each entry?
+	string flnm;//file name portion of name
+	string exte;//extension portion of name
 }
